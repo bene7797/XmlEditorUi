@@ -31,7 +31,30 @@ public class MainForm : Form
     private readonly Button removeCourseButton = new();
     private readonly Button saveTemplateButton = new();
     private readonly Button addFromTemplateButton = new();
+    private readonly TabControl mainTabs = new();
+    private readonly TabPage serviceEditorTab = new("Service bearbeiten");
+    private readonly TabPage templateEditorTab = new("Vorlagen bearbeiten");
 
+    private readonly TreeView templateTree = new();
+    private readonly DataGridView templateQuickGrid = new();
+    private readonly PropertyGrid templatePropertyGrid = new();
+
+    private readonly Button saveTemplateChangesButton = new();
+    private readonly Button reloadTemplatesButton = new();
+
+    private readonly string servicesTemplateFolder =
+        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "templates", "services");
+
+    private readonly string profilesFolder =
+        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "templates", "profiles");
+
+    private TemplateProfileManager? profileManager;
+    private List<LocationProfile> locationProfiles = new();
+    private List<CourseTypeProfile> courseTypeProfiles = new();
+
+    private XmlDocument? selectedTemplateDoc;
+    private string? selectedTemplatePath;
+    private XmlNode? selectedTemplateService;
     private readonly TabControl statusTabs = new();
     private readonly ListBox newServicesList = new();
     private readonly ListBox updatedServicesList = new();
@@ -82,6 +105,12 @@ public class MainForm : Form
         Text = "XML Service Editor";
         Width = 1200;
         Height = 820;
+        mainTabs.Dock = DockStyle.Fill;
+
+        mainTabs.TabPages.Add(serviceEditorTab);
+        mainTabs.TabPages.Add(templateEditorTab);
+
+        Controls.Add(mainTabs);
 
         Directory.CreateDirectory(templateFolder);
 
@@ -151,17 +180,17 @@ public class MainForm : Form
         AddStatusTab("Geändert / Update", updatedServicesList);
         AddStatusTab("Gelöscht", deletedServicesList);
 
-        Controls.Add(openButton);
-        Controls.Add(exportButton);
-        Controls.Add(validateButton);
-        Controls.Add(courseList);
-        Controls.Add(courseGrid);
-        Controls.Add(addCourseButton);
-        Controls.Add(addFromTemplateButton);
-        Controls.Add(saveTemplateButton);
-        Controls.Add(removeCourseButton);
-        Controls.Add(statusTabs);
-        Controls.Add(quickFieldsGrid);
+        serviceEditorTab.Controls.Add(openButton);
+        serviceEditorTab.Controls.Add(exportButton);
+        serviceEditorTab.Controls.Add(validateButton);
+        serviceEditorTab.Controls.Add(courseList);
+        serviceEditorTab.Controls.Add(courseGrid);
+        serviceEditorTab.Controls.Add(addCourseButton);
+        serviceEditorTab.Controls.Add(addFromTemplateButton);
+        serviceEditorTab.Controls.Add(saveTemplateButton);
+        serviceEditorTab.Controls.Add(removeCourseButton);
+        serviceEditorTab.Controls.Add(statusTabs);
+        serviceEditorTab.Controls.Add(quickFieldsGrid);
 
         quickFieldsGrid.Left = 450;
         quickFieldsGrid.Top = 60;
@@ -203,6 +232,299 @@ public class MainForm : Form
 
         Controls.Add(refreshViewButton);
         quickFieldsGrid.CellClick += QuickFieldsGrid_CellClick;
+
+        Directory.CreateDirectory(servicesTemplateFolder);
+        Directory.CreateDirectory(profilesFolder);
+
+        profileManager = new TemplateProfileManager(profilesFolder);
+
+        BuildTemplateEditorTab();
+        LoadTemplateProfilesAndTree();
+    }
+
+    private void BuildTemplateEditorTab()
+    {
+        templateTree.Left = 10;
+        templateTree.Top = 10;
+        templateTree.Width = 330;
+        templateTree.Height = 650;
+        templateTree.AfterSelect += TemplateTree_AfterSelect;
+
+        reloadTemplatesButton.Text = "Vorlagen neu laden";
+        reloadTemplatesButton.Left = 360;
+        reloadTemplatesButton.Top = 10;
+        reloadTemplatesButton.Width = 150;
+        reloadTemplatesButton.Click += (_, _) => LoadTemplateProfilesAndTree();
+
+        saveTemplateChangesButton.Text = "Vorlage speichern";
+        saveTemplateChangesButton.Left = 520;
+        saveTemplateChangesButton.Top = 10;
+        saveTemplateChangesButton.Width = 150;
+        saveTemplateChangesButton.Click += SaveSelectedTemplate;
+
+        templateQuickGrid.Left = 360;
+        templateQuickGrid.Top = 50;
+        templateQuickGrid.Width = 760;
+        templateQuickGrid.Height = 230;
+        templateQuickGrid.AllowUserToAddRows = false;
+        templateQuickGrid.AllowUserToDeleteRows = false;
+        templateQuickGrid.RowHeadersVisible = false;
+        templateQuickGrid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+        templateQuickGrid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+        templateQuickGrid.Columns.Add("Field", "Feld");
+        templateQuickGrid.Columns.Add("Value", "Wert");
+        templateQuickGrid.Columns["Field"]!.ReadOnly = true;
+        templateQuickGrid.CellValueChanged += TemplateQuickGrid_CellValueChanged;
+
+        templatePropertyGrid.Left = 360;
+        templatePropertyGrid.Top = 300;
+        templatePropertyGrid.Width = 760;
+        templatePropertyGrid.Height = 360;
+        templatePropertyGrid.ToolbarVisible = false;
+        templatePropertyGrid.HelpVisible = false;
+
+        templateEditorTab.Controls.Add(templateTree);
+        templateEditorTab.Controls.Add(reloadTemplatesButton);
+        templateEditorTab.Controls.Add(saveTemplateChangesButton);
+        templateEditorTab.Controls.Add(templateQuickGrid);
+        templateEditorTab.Controls.Add(templatePropertyGrid);
+    }
+
+    private void LoadTemplateProfilesAndTree()
+    {
+        if (profileManager == null)
+            return;
+
+        locationProfiles = profileManager.LoadLocations();
+        courseTypeProfiles = profileManager.LoadCourseTypes();
+
+        templateTree.Nodes.Clear();
+
+        var root = new TreeNode("Vorlagen");
+        templateTree.Nodes.Add(root);
+
+        var files = Directory.GetFiles(servicesTemplateFolder, "*.xml");
+
+        foreach (var file in files)
+        {
+            var doc = new XmlDocument();
+            doc.Load(file);
+
+            if (doc.DocumentElement == null)
+                continue;
+
+            var service = doc.DocumentElement;
+
+            var city = GetTextByPath(service,
+                "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/CITY") ?? "Ort ?";
+
+            var time = GetTextByPath(service,
+                "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/EXTENDED_INFO/INSTRUCTION_TIME") ?? "Zeit ?";
+
+            var educationType = GetTextByPath(service,
+                "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/EXTENDED_INFO/EDUCATION_TYPE") ?? "";
+
+            var typeName = educationType.Contains("Extern", StringComparison.OrdinalIgnoreCase)
+                ? "Externenprüfung"
+                : time;
+
+            var cityNode = FindOrCreateTreeNode(root, city);
+            var typeNode = FindOrCreateTreeNode(cityNode, typeName);
+
+            var templateNode = new TreeNode(Path.GetFileNameWithoutExtension(file))
+            {
+                Tag = file
+            };
+
+            typeNode.Nodes.Add(templateNode);
+        }
+
+        root.Expand();
+    }
+
+    private static TreeNode FindOrCreateTreeNode(TreeNode parent, string text)
+    {
+        foreach (TreeNode child in parent.Nodes)
+        {
+            if (child.Text.Equals(text, StringComparison.OrdinalIgnoreCase))
+                return child;
+        }
+
+        var node = new TreeNode(text);
+        parent.Nodes.Add(node);
+        return node;
+    }
+
+    private void TemplateTree_AfterSelect(object? sender, TreeViewEventArgs e)
+    {
+        if (e.Node?.Tag is not string path)
+            return;
+
+        selectedTemplatePath = path;
+        selectedTemplateDoc = new XmlDocument();
+        selectedTemplateDoc.PreserveWhitespace = true;
+        selectedTemplateDoc.Load(path);
+
+        selectedTemplateService = selectedTemplateDoc.DocumentElement;
+
+        LoadTemplateQuickFields();
+
+        if (selectedTemplateService != null)
+            templatePropertyGrid.SelectedObject =
+                new CourseEditableObject(selectedTemplateService, onlyFilledFields: true);
+    }
+
+    private void LoadTemplateQuickFields()
+    {
+        templateQuickGrid.Rows.Clear();
+
+        if (selectedTemplateService == null)
+            return;
+
+        foreach (var field in ImportantFields)
+        {
+            var value = GetTextByPath(selectedTemplateService, field.Path) ?? "";
+
+            var rowIndex = templateQuickGrid.Rows.Add(field.Label, value);
+            var row = templateQuickGrid.Rows[rowIndex];
+            row.Tag = field.Path;
+        }
+    }
+
+    private void TemplateQuickGrid_CellValueChanged(object? sender, DataGridViewCellEventArgs e)
+    {
+        if (selectedTemplateService == null)
+            return;
+
+        if (e.RowIndex < 0 || e.ColumnIndex != 1)
+            return;
+
+        var row = templateQuickGrid.Rows[e.RowIndex];
+
+        if (row.Tag is not string path)
+            return;
+
+        var newValue = row.Cells[1].Value?.ToString() ?? "";
+
+        SetNodeByPath(selectedTemplateService, path, newValue);
+
+        // Wenn Standortdaten geändert werden, auf alle Vorlagen mit gleichem Ort anwenden
+        if (path.Contains("/LOCATION/", StringComparison.OrdinalIgnoreCase))
+        {
+            var city = GetTextByPath(selectedTemplateService,
+                "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/CITY");
+
+            if (!string.IsNullOrWhiteSpace(city))
+                ApplyLocationChangeToAllTemplates(city, path, newValue);
+        }
+
+        // Wenn Vollzeit/Teilzeit geändert wird, nur Kurszeit-Profil aktualisieren
+        if (path.Contains("INSTRUCTION_TIME", StringComparison.OrdinalIgnoreCase))
+        {
+            var instructionTime = newValue.Trim();
+            ApplyInstructionTimeToMatchingTemplates(instructionTime, newValue);
+        }
+
+        templatePropertyGrid.SelectedObject =
+            new CourseEditableObject(selectedTemplateService, onlyFilledFields: true);
+    }
+
+    private void ApplyLocationChangeToAllTemplates(string city, string changedPath, string newValue)
+    {
+        var files = Directory.GetFiles(servicesTemplateFolder, "*.xml");
+
+        foreach (var file in files)
+        {
+            if (file == selectedTemplatePath)
+                continue;
+
+            var doc = new XmlDocument();
+            doc.PreserveWhitespace = true;
+            doc.Load(file);
+
+            if (doc.DocumentElement == null)
+                continue;
+
+            var service = doc.DocumentElement;
+
+            var templateCity = GetTextByPath(service,
+                "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/CITY");
+
+            if (!string.Equals(templateCity, city, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            SetNodeByPathForDocument(doc, service, changedPath, newValue);
+            doc.Save(file);
+        }
+    }
+
+    private void ApplyInstructionTimeToMatchingTemplates(string instructionTime, string newValue)
+    {
+        var files = Directory.GetFiles(servicesTemplateFolder, "*.xml");
+
+        foreach (var file in files)
+        {
+            if (file == selectedTemplatePath)
+                continue;
+
+            var doc = new XmlDocument();
+            doc.PreserveWhitespace = true;
+            doc.Load(file);
+
+            if (doc.DocumentElement == null)
+                continue;
+
+            var service = doc.DocumentElement;
+
+            var current = GetTextByPath(service,
+                "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/EXTENDED_INFO/INSTRUCTION_TIME");
+
+            if (!string.Equals(current, instructionTime, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            SetNodeByPathForDocument(doc, service,
+                "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/EXTENDED_INFO/INSTRUCTION_TIME",
+                newValue);
+
+            doc.Save(file);
+        }
+    }
+
+    private void SaveSelectedTemplate(object? sender, EventArgs e)
+    {
+        if (selectedTemplateDoc == null || string.IsNullOrWhiteSpace(selectedTemplatePath))
+        {
+            MessageBox.Show("Bitte Vorlage auswählen.");
+            return;
+        }
+
+        selectedTemplateDoc.Save(selectedTemplatePath);
+        MessageBox.Show("Vorlage gespeichert.");
+
+        LoadTemplateProfilesAndTree();
+    }
+
+    private static XmlNode SetNodeByPathForDocument(XmlDocument doc, XmlNode startNode, string path, string value)
+    {
+        var current = startNode;
+
+        foreach (var part in path.Split('/'))
+        {
+            var next = current.ChildNodes
+                .Cast<XmlNode>()
+                .FirstOrDefault(n => n.LocalName.Equals(part, StringComparison.OrdinalIgnoreCase));
+
+            if (next == null)
+            {
+                next = doc.CreateElement(part);
+                current.AppendChild(next);
+            }
+
+            current = next;
+        }
+
+        current.InnerText = value;
+        return current;
     }
     private void QuickFieldsGrid_CellClick(object? sender, DataGridViewCellEventArgs e)
     {
@@ -228,43 +550,31 @@ public class MainForm : Form
     }
     private void ShowDatePicker(DataGridViewRow row, string path)
     {
-        var picker = new DateTimePicker();
-        picker.Format = DateTimePickerFormat.Custom;
+        if (selectedCourse == null)
+            return;
 
-        bool isCourseDate = path.Contains("SERVICE_DATE");
-
-        picker.CustomFormat = isCourseDate
-            ? "yyyy-MM-dd'T'00:00:00.000+01:00"
-            : "yyyy-MM-dd+01:00";
+        bool isCourseDate = path.Contains("SERVICE_DATE", StringComparison.OrdinalIgnoreCase);
 
         var currentValue = row.Cells[1].Value?.ToString();
 
-        if (TryParseDate(currentValue, out var dt))
-            picker.Value = dt;
-        else
-            picker.Value = DateTime.Now;
+        if (!TryParseDate(currentValue, out var initialDate))
+            initialDate = DateTime.Now;
 
-        var rect = quickFieldsGrid.GetCellDisplayRectangle(1, row.Index, true);
+        using var popup = new DateTimePickerPopup(initialDate, includeTime: isCourseDate);
 
-        picker.Bounds = rect;
-        quickFieldsGrid.Controls.Add(picker);
+        if (popup.ShowDialog(this) != DialogResult.OK)
+            return;
 
-        picker.CloseUp += (_, _) =>
-        {
-            string formatted = isCourseDate
-                ? picker.Value.ToString("yyyy-MM-dd'T'00:00:00.000+01:00")
-                : picker.Value.ToString("yyyy-MM-dd+01:00");
+        string formatted = isCourseDate
+            ? popup.SelectedValue.ToString("yyyy-MM-dd'T'HH:mm:ss.000+01:00")
+            : popup.SelectedValue.ToString("yyyy-MM-dd+01:00");
 
-            row.Cells[1].Value = formatted;
+        row.Cells[1].Value = formatted;
 
-            SetNodeByPath(selectedCourse!, path, formatted);
+        SetNodeByPath(selectedCourse, path, formatted);
+        MarkFieldAsChanged(selectedCourse, path);
 
-            MarkFieldAsChanged(selectedCourse!, path);
-
-            quickFieldsGrid.Controls.Remove(picker);
-        };
-
-        picker.Focus();
+        ApplyQuickFieldColor(row, selectedCourse, path);
     }
     private bool TryParseDate(string? value, out DateTime dt)
     {
@@ -274,8 +584,16 @@ public class MainForm : Form
             return false;
         }
 
-        // nur Datum extrahieren (ohne Timezone)
-        var clean = value.Split('T')[0];
+        var clean = value.Trim();
+
+        if (clean.Contains("T"))
+        {
+            var main = clean.Split('+')[0];
+            return DateTime.TryParse(main, out dt);
+        }
+
+        if (clean.Contains("+"))
+            clean = clean.Split('+')[0];
 
         return DateTime.TryParse(clean, out dt);
     }
@@ -608,33 +926,85 @@ public class MainForm : Form
     private static string BuildServiceTitle(XmlNode service, int index)
     {
         var productId = GetChildText(service, "PRODUCT_ID");
-        var shortDescription = GetChildText(service, "SHORT_DESCRIPTION");
-        var description = GetChildText(service, "DESCRIPTION_SHORT");
-        var startDate = GetChildText(service, "DATE_START");
-        var endDate = GetChildText(service, "DATE_END");
+
+        var title = GetTextByPath(service, "SERVICE_DETAILS/TITLE");
+
+        var city = GetTextByPath(service,
+            "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/CITY");
+
+        var instructionTime = GetTextByPath(service,
+            "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/EXTENDED_INFO/INSTRUCTION_TIME");
+
+        var educationType = GetTextByPath(service,
+            "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/EXTENDED_INFO/EDUCATION_TYPE");
+
+        var startDate = GetTextByPath(service,
+            "SERVICE_DETAILS/SERVICE_DATE/START_DATE");
+
+        var category = BuildCourseCategory(city, instructionTime, educationType);
 
         var parts = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(category))
+            parts.Add($"[{category}]");
 
         if (!string.IsNullOrWhiteSpace(productId))
             parts.Add($"ID: {productId}");
 
-        if (!string.IsNullOrWhiteSpace(shortDescription))
-            parts.Add(shortDescription);
-
-        if (!string.IsNullOrWhiteSpace(description))
-            parts.Add(description);
-
         if (!string.IsNullOrWhiteSpace(startDate))
-            parts.Add($"Start: {startDate}");
+            parts.Add($"Start: {ShortDate(startDate)}");
 
-        if (!string.IsNullOrWhiteSpace(endDate))
-            parts.Add($"Ende: {endDate}");
+        if (!string.IsNullOrWhiteSpace(title))
+            parts.Add(title);
 
         return parts.Count > 0
             ? string.Join(" | ", parts)
             : $"SERVICE #{index + 1}";
     }
+    private static string BuildCourseCategory(string? city, string? instructionTime, string? educationType)
+    {
+        var cityText = string.IsNullOrWhiteSpace(city) ? "Ort ?" : city.Trim();
+        var timeText = string.IsNullOrWhiteSpace(instructionTime) ? "Zeit ?" : instructionTime.Trim();
 
+        var isExternenpruefung =
+            (educationType ?? "").Contains("Nachholen", StringComparison.OrdinalIgnoreCase)
+            || (educationType ?? "").Contains("Extern", StringComparison.OrdinalIgnoreCase);
+
+        if (isExternenpruefung)
+            return $"Externenprüfung - {cityText} - {timeText}";
+
+        return $"{cityText} - {timeText}";
+    }
+
+    private static string? GetTextByPath(XmlNode startNode, string path)
+    {
+        var current = startNode;
+
+        foreach (var part in path.Split('/'))
+        {
+            var next = current.ChildNodes
+                .Cast<XmlNode>()
+                .FirstOrDefault(n => n.LocalName.Equals(part, StringComparison.OrdinalIgnoreCase));
+
+            if (next == null)
+                return null;
+
+            current = next;
+        }
+
+        return current.InnerText?.Trim();
+    }
+
+    private static string ShortDate(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return "";
+
+        if (value.Length >= 10)
+            return value[..10];
+
+        return value;
+    }
     private void AddEmptyCourse(object? sender, EventArgs e)
     {
         if (document == null)
@@ -695,7 +1065,7 @@ public class MainForm : Form
             return;
         }
 
-        var templates = Directory.GetFiles(templateFolder, "*.xml");
+        var templates = Directory.GetFiles(servicesTemplateFolder, "*.xml");
 
         if (templates.Length == 0)
         {
@@ -830,7 +1200,7 @@ public class MainForm : Form
             return;
 
         var safeName = string.Join("_", name.Split(Path.GetInvalidFileNameChars()));
-        var path = Path.Combine(templateFolder, safeName + ".xml");
+        var path = Path.Combine(servicesTemplateFolder, safeName + ".xml");
 
         var templateDoc = new XmlDocument();
         var imported = templateDoc.ImportNode(selectedCourse, deep: true);

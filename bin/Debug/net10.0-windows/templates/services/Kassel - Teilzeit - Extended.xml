@@ -1,0 +1,157 @@
+<SERVICE mode="new">
+            <PRODUCT_ID>375057141</PRODUCT_ID>
+            <COURSE_TYPE>1</COURSE_TYPE>
+            <SUPPLIER_ID_REF type="supplier_specific">274125</SUPPLIER_ID_REF>
+            <SERVICE_DETAILS>
+                <TITLE>Umschulung Fachinformatiker Anwendungsentwicklung / Fachinformatikerin Anwendungsentwicklung</TITLE>
+                <DESCRIPTION_LONG>Die gesamte Ausbildung erfolgt stark codefokussiert und projektorientiert. Nach einer halbjährigen, sehr intensiven Coding-Einführung wird in Entwicklungsteams an realen Projekten gearbeitet. Gemäß dem Motto "Tiefe statt Breite" ist unser Ziel, dass unsere Teilnehmer:innen in dieser Phase lernen, mit praxisüblicher Komplexität umzugehen. Statt also 50zeilige Übungsprogramme zu schreiben, müssen die Teilnehmer:innen lernen, sich in Projekten mit zehntausenden Zeilen Code zurechtzufinden. Im Endeffekt sollen sie nach dieser Zeit in der Lage sein, handelsübliche Apps für Mobilgeräte und Desktop-PC und Routinen für Server-Backends zu schreiben.
+
+Hinsichtlich Programmiersprachen ist unsere Philosophie, in den ersten 12 Monaten in einer Sprache zu fortgeschrittenen Themen (wie HTTP-Requests, State Management, Dependency Injection, Animationen, Nutzung von Sensoren, ...) vorzudringen. Danach erfolgen dann Ausflüge in andere Sprachen, flexibel je nach Vorlieben der Teilnehmer:innen - beziehungsweise entsprechend der Erfordernisse des Arbeitsmarktes. Die Idee dahinter ist, dass man schon weiß, was "gehen muss", aber noch nicht, wie es in dieser neuen Sprache geht. Insofern praktiziert es die Lernhaltung, die man als professioneller Entwickler sowieso benötigt, nämlich sein Wissen immer wieder in neue Zusammenhänge zu transferieren.
+
+Im Mittelpunkt der praktischen Ausbildung steht für uns:
+
+- Professioneller Umgang mit Projekten
+- Praktische Programmierkenntnisse
+- Prozedurale, objektorientierte und funktionale Ansätze flexibel anwenden können
+- Umgang mit Daten (SQL, NoSQL, JSON, XML &amp; Co)
+- Clean Code
+- Algorithmik
+
+Während der gesamten Umschulungszeit werden moderne Organisationsprinzipien angewendet. Das heißt unter anderem:
+
+- Die Teams organisieren sich agil: In vielen kleinen Schritten wird an großen Projekten gearbeitet. Dabei lernt man die Zusammenarbeit im Team, aber auch die daraus resultierende Verantwortung, Code so zu schreiben, dass andere daran weiter arbeiten können, ohne viel Zeit darauf verwenden zu müssen, sich in den vorhandenen Code einfinden und Eure Gedanken nachvollziehen zu müssen. Das kann Kommentare bedeuten, aber vor allem heißt es, möglichst einfache Wege zum Ziel zu verfolgen, da diese eher nachvollziehbar sind.
+
+- Teilnehmer lernen, ihren Arbeitsaufwand einzuschätzen. Sie geben vor dem Beginn einer Aufgabe eine Einschätzung des Zeitaufwands ab und überprüfen ihre Vorab-Einschätzung im Nachhinein. Das ist eine wichtige Qualität für die berufliche Zukunft, denn nur wenn Entwickler diese Fähigkeit haben, können Entwicklungsabschnitte realistisch geplant werden.
+
+- Wir nutzen die Tools, welche Softwarefirmen nutzen, um sich zu organisieren (Jira, Confluence, Teams, Bitbucket, Github, Office, Figma, etc.).
+
+- Teambuilding-Events dienen dem Teamzusammenhalt und der Burnout-Prävention.
+
+Neben dem praktischen Unterricht werden die theoretischen Lerninhalte, die sich aus Ausbildungsordnung und Rahmenlehrplan ergeben, projekbegleitend in Gruppenunterrichten vermittelt. Die Teilnehmer:innen erhalten einen sich automatisch fortschreibenden persönlichen Lernfortschrittsbericht. Hier können sie auch sehen, ob sie thematisch auch wirklich alles können, was sie zu diesem Zeitpunkt können sollten.
+
+Das Bildungsangebot beinhaltet in Vollzeit 110 und in Teilzeit 180 Tage Praktikum in einem Softwareunternehmen.</DESCRIPTION_LONG>
+                <SUPPLIER_ALT_PID>375057134</SUPPLIER_ALT_PID>
+                <CONTACT>
+                    <CONTACT_ROLE type="1">Ansprechpartner</CONTACT_ROLE>
+                    <SALUTATION>m</SALUTATION>
+                    <FIRST_NAME>Andreas</FIRST_NAME>
+                    <LAST_NAME>Höfer</LAST_NAME>
+                    <PHONE>+49.561.98808660</PHONE>
+                    <MOBILE>+49.1578.6897671</MOBILE>
+                    <FAX />
+                    <EMAILS>
+                        <EMAIL>andreas_hoefer@cdemy.de</EMAIL>
+                    </EMAILS>
+                    <URL>https://cdemy.de</URL>
+                    <ID_DB>1148177</ID_DB>
+                    <CONTACT_REMARKS>Leiter Unternehmensentwicklung</CONTACT_REMARKS>
+                </CONTACT>
+                <REQUIREMENTS>Da wir ein bewusst anspruchsvolles Konzept verfolgen, wird ein eigener Eignungstest und ein ausführliches Gespräch vorausgesetzt - zusätzlich zu den allgemeinen Kriterien für Umschulungen seitens der IHK.</REQUIREMENTS>
+                <SERVICE_DATE>
+                    <START_DATE>2027-02-05T00:00:00.000+01:00</START_DATE>
+                    <END_DATE>2029-01-26T00:00:00.000+01:00</END_DATE>
+                </SERVICE_DATE>
+                <KEYWORD>Fachinformatiker</KEYWORD>
+                <KEYWORD>Umschulung</KEYWORD>
+                <KEYWORD>Umschulung Fachinformatiker Anwendungsentwicklung / Fachinformatikerin Anwendungsentwicklung</KEYWORD>
+                <KEYWORD>Anwendungsentwicklung</KEYWORD>
+                <KEYWORD>Fachinformatikerin</KEYWORD>
+                <TARGET_GROUP>
+                    <TARGET_GROUP_TEXT>Erwerbslose ohne entsprechenden Bildungsabschluss mit großem technischen Interesse und analytischen Fähigkeiten.</TARGET_GROUP_TEXT>
+                </TARGET_GROUP>
+                <TERMS_AND_CONDITIONS>Wir beschränken uns insgesamt auf eine Gesamtzahl von 24 Teilnehmer:innen (nicht pro Starttermin, sondern insgesamt anwesend). Eine Lerngruppe sind daher circa 6-8 Teilnehmer:innen. So ist die individuelle Förderung gewährleistet. Die Teilnehmer:innen formen von Anfang an ein Team und lösen gemeinsam zunehmend komplexe Aufgaben. Eine Betreuungsrelation von 1 Dozent pro 8 Teilnehmer:innen ist zugesichert.</TERMS_AND_CONDITIONS>
+                <SERVICE_MODULE>
+                    <EDUCATION type="true">
+                        <COURSE_ID>375057134</COURSE_ID>
+                        <DEGREE type="0">
+                            <DEGREE_TITLE>Fachinformatiker FR Anwendungsentwicklung / Fachinformatikerin FR Anwendungsentwicklung</DEGREE_TITLE>
+                            <DEGREE_EXAM type="Berufsabschluss">
+                                <EXAMINER>IHK</EXAMINER>
+                            </DEGREE_EXAM>
+                            <DEGREE_ADD_QUALIFICATION>Separate Bestätigung der individuell erworbenen Kenntnisse. Die Mitarbeit an Projekten kann mittels qualifizierten Arbeitszeugnissen bestätigt werden. Individuelle Zusatzqualifikationen sind möglich.</DEGREE_ADD_QUALIFICATION>
+                            <DEGREE_ENTITLED>Keine Angabe</DEGREE_ENTITLED>
+                        </DEGREE>
+                        <CREDITS>Die Anrechnung bereits absolvierter Ausbildungsabschnitte ist möglich.</CREDITS>
+                        <SUBSIDY>
+                            <SUBSIDY_DESCRIPTION>Bei Vorliegen entsprechender Voraussetzungen ist eine Förderung durch die Arbeitsagentur, ein Jobcenter oder andere Kostenträger möglich.</SUBSIDY_DESCRIPTION>
+                        </SUBSIDY>
+                        <REGISTRATION_DATE>2027-02-05T00:00:00.000+01:00</REGISTRATION_DATE>
+                        <MIME_INFO>
+                            <MIME_ELEMENT>
+                                <MIME_SOURCE>https://cdemy.de/umschulung/anwendungsentwicklung</MIME_SOURCE>
+                            </MIME_ELEMENT>
+                        </MIME_INFO>
+                        <CERTIFICATE>
+                            <CERTIFICATE_STATUS>1</CERTIFICATE_STATUS>
+                            <CERTIFIER_NUMBER>69</CERTIFIER_NUMBER>
+                            <CERT_VALIDITY />
+                        </CERTIFICATE>
+                        <EXTENDED_INFO>
+                            <INSTITUTION type="102">Berufsbildende Schule/Einrichtung</INSTITUTION>
+                            <INSTRUCTION_FORM type="101">Präsenzunterricht</INSTRUCTION_FORM>
+                            <INSTRUCTION_TIME type="1">Teilzeit</INSTRUCTION_TIME>
+                            <FUNDING_TYPES_FEDERAL type="2">Bildungsgutschein</FUNDING_TYPES_FEDERAL>
+                            <FUNDING_TYPES_FEDERAL type="5">Weiterbildungsstipendium bei der Stiftung Begabtenförderung berufliche Bildung (SBB)</FUNDING_TYPES_FEDERAL>
+                            <FUNDING_TYPES_FEDERAL type="12">Arbeitslosengeld bei beruflicher Weiterbildung</FUNDING_TYPES_FEDERAL>
+                            <FUNDING_TYPES_FEDERAL type="9">Förderung beruflicher Weiterbildung für Beschäftigte in Transfergesellschaften</FUNDING_TYPES_FEDERAL>
+                            <DIGITAL_ACCESSIBILITY>false</DIGITAL_ACCESSIBILITY>
+                            <TEACHING_LANGUAGES>deu</TEACHING_LANGUAGES>
+                            <TEACHING_LANGUAGES>eng</TEACHING_LANGUAGES>
+                            <TEACHING_LANGUAGES_REMARKS>Unterricht erfolgt in Deutsch &amp; Englisch (also man sollte beides können). Darüber hinaus gibt es besondere Unterstützungsangebote auf Russisch + Arabisch. Letztere ersetzen nicht, dass man die beiden Hauptsprachen circa auf B2-Niveau beherrschen sollte.</TEACHING_LANGUAGES_REMARKS>
+                            <EDUCATION_TYPE type="109">Umschulung</EDUCATION_TYPE>
+                        </EXTENDED_INFO>
+                        <MODULE_COURSE>
+                            <MIN_PARTICIPANTS>1</MIN_PARTICIPANTS>
+                            <MAX_PARTICIPANTS>12</MAX_PARTICIPANTS>
+                            <LOCATION>
+                                <NAME>cdemy GmbH</NAME>
+                                <NAME2>Code Academy</NAME2>
+                                <STREET>Richard-Roosen-Straße 9</STREET>
+                                <ZIP>34123</ZIP>
+                                <ZIPBOX>34123</ZIPBOX>
+                                <CITY>Kassel</CITY>
+                                <STATE>Hessen</STATE>
+                                <COUNTRY>deutschland</COUNTRY>
+                                <PHONE>+49.341.99990117</PHONE>
+                                <MOBILE>+49.157.86967671</MOBILE>
+                                <FAX />
+                                <EMAILS>
+                                    <EMAIL>info@cdemy.de</EMAIL>
+                                </EMAILS>
+                                <URL>https://cdemy.de</URL>
+                                <ADDRESS_REMARKS>Gut erreichbar im Industriepark Waldau. Mehrere Autobahnanschlüsse. Mehrere ÖPNV-Haltestellen in fußläufiger Entfernung.</ADDRESS_REMARKS>
+                                <BARRIER_FREE_LOCATION>false</BARRIER_FREE_LOCATION>
+                            </LOCATION>
+                            <DURATION type="7" />
+                            <INSTRUCTION_REMARKS>Montag bis Freitag 5,5 Stunden pro Tag in individueller Gleitzeit, aber mit einer Pflicht-Kernzeit von 09:30 Uhr bis 13:30 Uhr.</INSTRUCTION_REMARKS>
+                            <FLEXIBLE_START>false</FLEXIBLE_START>
+                            <EXTENDED_INFO>
+                                <SEGMENT_TYPE type="0" />
+                            </EXTENDED_INFO>
+                        </MODULE_COURSE>
+                    </EDUCATION>
+                </SERVICE_MODULE>
+                <ANNOUNCEMENT>
+                    <START_DATE>2026-02-18+01:00</START_DATE>
+                    <END_DATE>2027-02-05+01:00</END_DATE>
+                </ANNOUNCEMENT>
+            </SERVICE_DETAILS>
+            <SERVICE_CLASSIFICATION>
+                <REFERENCE_CLASSIFICATION_SYSTEM_NAME>Kurssystematik</REFERENCE_CLASSIFICATION_SYSTEM_NAME>
+                <FEATURE>
+                    <FNAME>B 43412-90200</FNAME>
+                    <FVALUE>Fachinformatiker/Fachinformatikerin Fachrichtung Anwendungsentwicklung</FVALUE>
+                </FEATURE>
+            </SERVICE_CLASSIFICATION>
+            <SERVICE_PRICE_DETAILS>
+                <SERVICE_PRICE>
+                    <PRICE_AMOUNT>35464.5</PRICE_AMOUNT>
+                    <PRICE_CURRENCY>EUR</PRICE_CURRENCY>
+                </SERVICE_PRICE>
+            </SERVICE_PRICE_DETAILS>
+            <MIME_INFO>
+                <MIME_ELEMENT>
+                    <MIME_SOURCE>https://cdemy.de/umschulung/anwendungsentwicklung</MIME_SOURCE>
+                </MIME_ELEMENT>
+            </MIME_INFO>
+        </SERVICE>
