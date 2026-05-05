@@ -1,0 +1,98 @@
+<SERVICE>
+            <PRODUCT_ID>375057135</PRODUCT_ID>
+            <COURSE_TYPE>1</COURSE_TYPE>
+            <SERVICE_DETAILS>
+                <TITLE />
+                <SUPPLIER_ALT_PID>375057135</SUPPLIER_ALT_PID>
+                <CONTACT>
+                    <CONTACT_ROLE type="1">Ansprechpartner</CONTACT_ROLE>
+                    <SALUTATION>m</SALUTATION>
+                    <FIRST_NAME>Andreas</FIRST_NAME>
+                    <LAST_NAME>Höfer</LAST_NAME>
+                    <PHONE>+49.561.98808660</PHONE>
+                    <MOBILE>+49.1578.6897671</MOBILE>
+                    <FAX />
+                    <EMAILS>
+                        <EMAIL>andreas_hoefer@cdemy.de</EMAIL>
+                    </EMAILS>
+                    <URL>https://cdemy.de</URL>
+                    <ID_DB>1148177</ID_DB>
+                    <CONTACT_REMARKS>Leiter Unternehmensentwicklung</CONTACT_REMARKS>
+                </CONTACT>
+                <SERVICE_DATE>
+                    <START_DATE>2027-02-05T00:00:00.000+01:00</START_DATE>
+                    <END_DATE>2030-01-25T00:00:00.000+01:00</END_DATE>
+                </SERVICE_DATE>
+                <TERMS_AND_CONDITIONS>Wir beschränken uns insgesamt auf eine Gesamtzahl von 24 Teilnehmer:innen (nicht pro Starttermin, sondern insgesamt anwesend). Eine Lerngruppe sind daher circa 6-8 Teilnehmer:innen. So ist die individuelle Förderung gewährleistet. Die Teilnehmer:innen formen von Anfang an ein Team und lösen gemeinsam zunehmend komplexe Aufgaben. Eine Betreuungsrelation von 1 Dozent pro 8 Teilnehmer:innen ist zugesichert.</TERMS_AND_CONDITIONS>
+                <SERVICE_MODULE>
+                    <EDUCATION type="false">
+                        <COURSE_ID>375057134</COURSE_ID>
+                        <REGISTRATION_DATE>2027-02-05T00:00:00.000+01:00</REGISTRATION_DATE>
+                        <MIME_INFO>
+                            <MIME_ELEMENT>
+                                <MIME_SOURCE>https://cdemy.de/umschulung/anwendungsentwicklung</MIME_SOURCE>
+                            </MIME_ELEMENT>
+                        </MIME_INFO>
+                        <CERTIFICATE>
+                            <CERTIFICATE_STATUS>1</CERTIFICATE_STATUS>
+                            <CERTIFIER_NUMBER>69</CERTIFIER_NUMBER>
+                            <CERT_VALIDITY />
+                        </CERTIFICATE>
+                        <EXTENDED_INFO>
+                            <INSTITUTION type="102">Berufsbildende Schule/Einrichtung</INSTITUTION>
+                            <INSTRUCTION_FORM type="101">Präsenzunterricht</INSTRUCTION_FORM>
+                            <INSTRUCTION_TIME type="2">Teilzeit</INSTRUCTION_TIME>
+                            <FUNDING_TYPES_FEDERAL type="13">Förderung von Menschen mit gesundheitlicher Beeinträchtigung</FUNDING_TYPES_FEDERAL>
+                            <FUNDING_TYPES_FEDERAL type="5">Weiterbildungsstipendium bei der Stiftung Begabtenförderung berufliche Bildung (SBB)</FUNDING_TYPES_FEDERAL>
+                            <FUNDING_TYPES_FEDERAL type="9">Förderung beruflicher Weiterbildung für Beschäftigte in Transfergesellschaften</FUNDING_TYPES_FEDERAL>
+                            <FUNDING_TYPES_FEDERAL type="12">Arbeitslosengeld bei beruflicher Weiterbildung</FUNDING_TYPES_FEDERAL>
+                            <FUNDING_TYPES_FEDERAL type="2">Bildungsgutschein</FUNDING_TYPES_FEDERAL>
+                            <DIGITAL_ACCESSIBILITY>false</DIGITAL_ACCESSIBILITY>
+                            <TEACHING_LANGUAGES>deu</TEACHING_LANGUAGES>
+                            <TEACHING_LANGUAGES>eng</TEACHING_LANGUAGES>
+                            <TEACHING_LANGUAGES_REMARKS>Unterricht erfolgt in Deutsch &amp; Englisch (also man sollte beides können). Darüber hinaus gibt es besondere Unterstützungsangebote auf Russisch + Arabisch. Letztere ersetzen nicht, dass man die beiden Hauptsprachen circa auf B2-Niveau beherrschen sollte.</TEACHING_LANGUAGES_REMARKS>
+                            <EDUCATION_TYPE type="109">Umschulung</EDUCATION_TYPE>
+                        </EXTENDED_INFO>
+                        <MODULE_COURSE>
+                            <MIN_PARTICIPANTS>1</MIN_PARTICIPANTS>
+                            <MAX_PARTICIPANTS>12</MAX_PARTICIPANTS>
+                            <LOCATION>
+                                <NAME>cdemy GmbH</NAME>
+                                <NAME2>Code Academy</NAME2>
+                                <STREET>Richard-Roosen-Straße 9</STREET>
+                                <ZIP>34123</ZIP>
+                                <ZIPBOX>34123</ZIPBOX>
+                                <CITY>Kassel</CITY>
+                                <STATE>Hessen</STATE>
+                                <COUNTRY>deutschland</COUNTRY>
+                                <PHONE>+49.561.98808660</PHONE>
+                                <MOBILE>+49.1578.6897671</MOBILE>
+                                <FAX />
+                                <EMAILS>
+                                    <EMAIL>info@cdemy.de</EMAIL>
+                                </EMAILS>
+                                <URL>https://cdemy.de</URL>
+                                <ADDRESS_REMARKS>Gut erreichbar im Industriepark Waldau. Mehrere Autobahnanschlüsse. Mehrere ÖPNV-Haltestellen in fußläufiger Entfernung.</ADDRESS_REMARKS>
+                                <BARRIER_FREE_LOCATION>false</BARRIER_FREE_LOCATION>
+                            </LOCATION>
+                            <DURATION type="8" />
+                            <INSTRUCTION_REMARKS>Montag bis Freitag 5,5 Stunden pro Tag in individueller Gleitzeit, aber mit einer Pflicht-Kernzeit von 09:30 Uhr bis 13:30 Uhr.</INSTRUCTION_REMARKS>
+                            <FLEXIBLE_START>false</FLEXIBLE_START>
+                            <EXTENDED_INFO>
+                                <SEGMENT_TYPE type="0" />
+                            </EXTENDED_INFO>
+                        </MODULE_COURSE>
+                    </EDUCATION>
+                </SERVICE_MODULE>
+                <ANNOUNCEMENT>
+                    <START_DATE>2026-02-18+01:00</START_DATE>
+                    <END_DATE>2027-02-05+01:00</END_DATE>
+                </ANNOUNCEMENT>
+            </SERVICE_DETAILS>
+            <SERVICE_PRICE_DETAILS>
+                <SERVICE_PRICE>
+                    <PRICE_AMOUNT>33746.7</PRICE_AMOUNT>
+                    <PRICE_CURRENCY>EUR</PRICE_CURRENCY>
+                </SERVICE_PRICE>
+            </SERVICE_PRICE_DETAILS>
+        </SERVICE>
