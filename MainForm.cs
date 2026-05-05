@@ -114,6 +114,9 @@ public class MainForm : Form
         courseGrid.Width = 700;
         courseGrid.Height = 450;
         courseGrid.PropertyValueChanged += CourseGrid_PropertyValueChanged;
+        courseGrid.ToolbarVisible = false;
+        courseGrid.PropertySort = PropertySort.NoSort;
+        courseGrid.HelpVisible = false;
 
         addCourseButton.Text = "Neuer Service";
         addCourseButton.Left = 450;
