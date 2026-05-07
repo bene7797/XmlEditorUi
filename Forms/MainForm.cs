@@ -11,15 +11,6 @@ namespace XmlEditorUi;
 
 public class MainForm : Form
 {
-    private enum ServiceState
-    {
-        Unchanged,
-        New,
-        Updated
-    }
-
-    private record DeletedServiceInfo(string ProductId, string Title);
-
     private readonly Button openButton = new();
     private readonly Button exportButton = new();
     private readonly Button validateButton = new();
@@ -52,9 +43,6 @@ public class MainForm : Form
     private List<LocationProfile> locationProfiles = new();
     private List<CourseTypeProfile> courseTypeProfiles = new();
 
-    private XmlDocument? selectedTemplateDoc;
-    private string? selectedTemplatePath;
-    private XmlNode? selectedTemplateService;
     private readonly TabControl statusTabs = new();
     private readonly ListBox newServicesList = new();
     private readonly ListBox updatedServicesList = new();
@@ -63,37 +51,12 @@ public class MainForm : Form
 
     private readonly Button refreshViewButton = new();
 
-    private readonly Dictionary<XmlNode, HashSet<string>> pendingTemplateFields = new();
-    private readonly Dictionary<XmlNode, HashSet<string>> changedImportantFields = new();
+    private readonly XmlServiceManager serviceManager;
+    private readonly ServiceTemplateRepository templateRepository;
 
-    private readonly Dictionary<XmlNode, ServiceState> serviceStates = new();
-    private readonly List<DeletedServiceInfo> deletedServices = new();
-    private static readonly List<QuickFieldDefinition> ImportantFields = new()
-{
-    new("Produkt-ID", "PRODUCT_ID"),
-    //new("Course-ID", "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/COURSE_ID"),
-
-   // new("Kurstitel", "SERVICE_DETAILS/TITLE"),
-
-    new("Startdatum Kurs", "SERVICE_DETAILS/SERVICE_DATE/START_DATE"),
-    new("Enddatum Kurs", "SERVICE_DETAILS/SERVICE_DATE/END_DATE"),
-
-    new("Ankündigung Start", "SERVICE_DETAILS/ANNOUNCEMENT/START_DATE"),
-    new("Ankündigung Ende", "SERVICE_DETAILS/ANNOUNCEMENT/END_DATE"),
-
-    new("Min. Teilnehmer", "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/MIN_PARTICIPANTS"),
-    new("Max. Teilnehmer", "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/MAX_PARTICIPANTS"),
-
-    new("Preis", "SERVICE_PRICE_DETAILS/SERVICE_PRICE/PRICE_AMOUNT"),
-
-   // new("Ort Name", "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/NAME"),
-    //new("Straße", "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/STREET"),
-    //new("PLZ", "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/ZIP"),
-    //new("Stadt", "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/CITY"),
-    //new("Bundesland", "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/STATE")
-};
-
-    private record QuickFieldDefinition(string Label, string Path);
+    private XmlDocument? selectedTemplateDoc;
+    private string? selectedTemplatePath;
+    private XmlNode? selectedTemplateService;
     private XmlDocument? document;
     private XmlNode? selectedCourse;
 
@@ -233,7 +196,8 @@ public class MainForm : Form
         Controls.Add(refreshViewButton);
         quickFieldsGrid.CellClick += QuickFieldsGrid_CellClick;
 
-        Directory.CreateDirectory(servicesTemplateFolder);
+        templateRepository = new ServiceTemplateRepository(servicesTemplateFolder);
+        serviceManager = new XmlServiceManager(servicesTemplateFolder, ImportantFields.List);
         Directory.CreateDirectory(profilesFolder);
 
         profileManager = new TemplateProfileManager(profilesFolder);
@@ -303,7 +267,7 @@ public class MainForm : Form
         var root = new TreeNode("Vorlagen");
         templateTree.Nodes.Add(root);
 
-        var files = Directory.GetFiles(servicesTemplateFolder, "*.xml");
+        var files = templateRepository.GetTemplateFiles();
 
         foreach (var file in files)
         {
@@ -315,13 +279,13 @@ public class MainForm : Form
 
             var service = doc.DocumentElement;
 
-            var city = GetTextByPath(service,
+            var city = service.GetTextByPath(
                 "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/CITY") ?? "Ort ?";
 
-            var time = GetTextByPath(service,
+            var time = service.GetTextByPath(
                 "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/EXTENDED_INFO/INSTRUCTION_TIME") ?? "Zeit ?";
 
-            var educationType = GetTextByPath(service,
+            var educationType = service.GetTextByPath(
                 "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/EXTENDED_INFO/EDUCATION_TYPE") ?? "";
 
             var typeName = educationType.Contains("Extern", StringComparison.OrdinalIgnoreCase)
@@ -381,9 +345,9 @@ public class MainForm : Form
         if (selectedTemplateService == null)
             return;
 
-        foreach (var field in ImportantFields)
+        foreach (var field in ImportantFields.List)
         {
-            var value = GetTextByPath(selectedTemplateService, field.Path) ?? "";
+            var value = selectedTemplateService.GetTextByPath(field.Path) ?? string.Empty;
 
             var rowIndex = templateQuickGrid.Rows.Add(field.Label, value);
             var row = templateQuickGrid.Rows[rowIndex];
@@ -406,88 +370,28 @@ public class MainForm : Form
 
         var newValue = row.Cells[1].Value?.ToString() ?? "";
 
-        SetNodeByPath(selectedTemplateService, path, newValue);
+        selectedTemplateService.SetNodeByPath(path, newValue);
 
         // Wenn Standortdaten geändert werden, auf alle Vorlagen mit gleichem Ort anwenden
         if (path.Contains("/LOCATION/", StringComparison.OrdinalIgnoreCase))
         {
-            var city = GetTextByPath(selectedTemplateService,
+            var city = selectedTemplateService.GetTextByPath(
                 "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/CITY");
 
-            if (!string.IsNullOrWhiteSpace(city))
-                ApplyLocationChangeToAllTemplates(city, path, newValue);
+            if (!string.IsNullOrWhiteSpace(city) && !string.IsNullOrWhiteSpace(selectedTemplatePath))
+                templateRepository.ApplyLocationChangeToAllTemplates(selectedTemplatePath, city, path, newValue);
         }
 
         // Wenn Vollzeit/Teilzeit geändert wird, nur Kurszeit-Profil aktualisieren
-        if (path.Contains("INSTRUCTION_TIME", StringComparison.OrdinalIgnoreCase))
+        if (path.Contains("INSTRUCTION_TIME", StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(selectedTemplatePath))
         {
             var instructionTime = newValue.Trim();
-            ApplyInstructionTimeToMatchingTemplates(instructionTime, newValue);
+            templateRepository.ApplyInstructionTimeToMatchingTemplates(selectedTemplatePath, instructionTime, newValue);
         }
 
         templatePropertyGrid.SelectedObject =
             new CourseEditableObject(selectedTemplateService, onlyFilledFields: true);
-    }
-
-    private void ApplyLocationChangeToAllTemplates(string city, string changedPath, string newValue)
-    {
-        var files = Directory.GetFiles(servicesTemplateFolder, "*.xml");
-
-        foreach (var file in files)
-        {
-            if (file == selectedTemplatePath)
-                continue;
-
-            var doc = new XmlDocument();
-            doc.PreserveWhitespace = true;
-            doc.Load(file);
-
-            if (doc.DocumentElement == null)
-                continue;
-
-            var service = doc.DocumentElement;
-
-            var templateCity = GetTextByPath(service,
-                "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/CITY");
-
-            if (!string.Equals(templateCity, city, StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            SetNodeByPathForDocument(doc, service, changedPath, newValue);
-            doc.Save(file);
-        }
-    }
-
-    private void ApplyInstructionTimeToMatchingTemplates(string instructionTime, string newValue)
-    {
-        var files = Directory.GetFiles(servicesTemplateFolder, "*.xml");
-
-        foreach (var file in files)
-        {
-            if (file == selectedTemplatePath)
-                continue;
-
-            var doc = new XmlDocument();
-            doc.PreserveWhitespace = true;
-            doc.Load(file);
-
-            if (doc.DocumentElement == null)
-                continue;
-
-            var service = doc.DocumentElement;
-
-            var current = GetTextByPath(service,
-                "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/EXTENDED_INFO/INSTRUCTION_TIME");
-
-            if (!string.Equals(current, instructionTime, StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            SetNodeByPathForDocument(doc, service,
-                "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/EXTENDED_INFO/INSTRUCTION_TIME",
-                newValue);
-
-            doc.Save(file);
-        }
     }
 
     private void SaveSelectedTemplate(object? sender, EventArgs e)
@@ -571,8 +475,8 @@ public class MainForm : Form
 
         row.Cells[1].Value = formatted;
 
-        SetNodeByPath(selectedCourse, path, formatted);
-        MarkFieldAsChanged(selectedCourse, path);
+        selectedCourse.SetNodeByPath(path, formatted);
+        serviceManager.MarkFieldAsChanged(selectedCourse, path);
 
         ApplyQuickFieldColor(row, selectedCourse, path);
     }
@@ -597,54 +501,6 @@ public class MainForm : Form
 
         return DateTime.TryParse(clean, out dt);
     }
-    private void MarkFieldAsChanged(XmlNode service, string path)
-    {
-        if (!changedImportantFields.ContainsKey(service))
-            changedImportantFields[service] = new HashSet<string>();
-
-        changedImportantFields[service].Add(path);
-
-        if (pendingTemplateFields.TryGetValue(service, out var pending))
-            pending.Remove(path);
-
-        if (!serviceStates.ContainsKey(service))
-            serviceStates[service] = ServiceState.Unchanged;
-
-        if (serviceStates[service] == ServiceState.Unchanged)
-            serviceStates[service] = ServiceState.Updated;
-
-        LoadQuickFields();
-        RefreshStatusLists();
-    }
-    private string GenerateNewProductId()
-    {
-        var existingIds = document!
-            .GetElementsByTagName("*")
-            .Cast<XmlNode>()
-            .Where(n => n.LocalName.Equals("PRODUCT_ID", StringComparison.OrdinalIgnoreCase))
-            .Select(n => n.InnerText.Trim())
-            .Where(v => long.TryParse(v, out _))
-            .Select(long.Parse)
-            .ToHashSet();
-
-        if (existingIds.Count == 0)
-            return "1";
-
-        var nextId = existingIds.Max() + 1;
-
-        while (existingIds.Contains(nextId))
-            nextId++;
-
-        return nextId.ToString();
-    }
-    private bool ProductIdExists(string productId)
-    {
-        return document!
-            .GetElementsByTagName("*")
-            .Cast<XmlNode>()
-            .Where(n => n.LocalName.Equals("PRODUCT_ID", StringComparison.OrdinalIgnoreCase))
-            .Any(n => n.InnerText.Trim() == productId);
-    }
     private void AddStatusTab(string title, ListBox listBox)
     {
         var tab = new TabPage(title);
@@ -661,12 +517,8 @@ public class MainForm : Form
         if (dialog.ShowDialog() != DialogResult.OK)
             return;
 
-        document = new XmlDocument();
-        document.PreserveWhitespace = true;
-        document.Load(dialog.FileName);
-
-        serviceStates.Clear();
-        deletedServices.Clear();
+        serviceManager.LoadXml(dialog.FileName);
+        document = serviceManager.Document;
 
         LoadCourses();
         RefreshStatusLists();
@@ -678,20 +530,7 @@ public class MainForm : Form
         courseGrid.SelectedObject = null;
         selectedCourse = null;
 
-        if (document?.DocumentElement == null)
-            return;
-
-        var services = document
-            .GetElementsByTagName("*")
-            .Cast<XmlNode>()
-            .Where(IsServiceNode)
-            .ToList();
-
-        foreach (var service in services)
-        {
-            if (!serviceStates.ContainsKey(service))
-                serviceStates[service] = ServiceState.Unchanged;
-        }
+        var services = serviceManager.GetServiceNodes().ToList();
 
         if (services.Count == 0)
         {
@@ -711,9 +550,9 @@ public class MainForm : Form
         if (selectedCourse == null)
             return;
 
-        foreach (var field in ImportantFields)
+        foreach (var field in ImportantFields.List)
         {
-            var value = GetNodeByPath(selectedCourse, field.Path)?.InnerText ?? "";
+            var value = selectedCourse.GetNodeByPath(field.Path)?.InnerText ?? string.Empty;
 
             var rowIndex = quickFieldsGrid.Rows.Add(field.Label, value);
             var row = quickFieldsGrid.Rows[rowIndex];
@@ -725,14 +564,14 @@ public class MainForm : Form
 
     private void ApplyQuickFieldColor(DataGridViewRow row, XmlNode service, string path)
     {
-        if (pendingTemplateFields.TryGetValue(service, out var pending)
+        if (serviceManager.PendingTemplateFields.TryGetValue(service, out var pending)
             && pending.Contains(path))
         {
             row.DefaultCellStyle.BackColor = Color.LightCoral;
             return;
         }
 
-        if (changedImportantFields.TryGetValue(service, out var changed)
+        if (serviceManager.ChangedImportantFields.TryGetValue(service, out var changed)
             && changed.Contains(path))
         {
             row.DefaultCellStyle.BackColor = Color.LightGreen;
@@ -755,71 +594,14 @@ public class MainForm : Form
         if (row.Tag is not string path)
             return;
 
-        var newValue = row.Cells[1].Value?.ToString() ?? "";
+        var newValue = row.Cells[1].Value?.ToString() ?? string.Empty;
 
-        SetNodeByPath(selectedCourse, path, newValue);
-
-        if (!changedImportantFields.ContainsKey(selectedCourse))
-            changedImportantFields[selectedCourse] = new HashSet<string>();
-
-        changedImportantFields[selectedCourse].Add(path);
-
-        if (pendingTemplateFields.TryGetValue(selectedCourse, out var pending))
-            pending.Remove(path);
-
-        if (!serviceStates.ContainsKey(selectedCourse))
-            serviceStates[selectedCourse] = ServiceState.Unchanged;
-
-        if (serviceStates[selectedCourse] == ServiceState.Unchanged)
-            serviceStates[selectedCourse] = ServiceState.Updated;
+        selectedCourse.SetNodeByPath(path, newValue);
+        serviceManager.MarkFieldAsChanged(selectedCourse, path);
 
         ApplyQuickFieldColor(row, selectedCourse, path);
-
-        // courseGrid.SelectedObject = new CourseEditableObject(selectedCourse, onlyFilledFields: true);
-
-        //        RefreshSelectedCourseTitle();
-        //      RefreshStatusLists();
     }
 
-    private XmlNode? GetNodeByPath(XmlNode startNode, string path)
-    {
-        var current = startNode;
-
-        foreach (var part in path.Split('/'))
-        {
-            current = current.ChildNodes
-                .Cast<XmlNode>()
-                .FirstOrDefault(n => n.LocalName.Equals(part, StringComparison.OrdinalIgnoreCase));
-
-            if (current == null)
-                return null;
-        }
-
-        return current;
-    }
-
-    private XmlNode SetNodeByPath(XmlNode startNode, string path, string value)
-    {
-        var current = startNode;
-
-        foreach (var part in path.Split('/'))
-        {
-            var next = current.ChildNodes
-                .Cast<XmlNode>()
-                .FirstOrDefault(n => n.LocalName.Equals(part, StringComparison.OrdinalIgnoreCase));
-
-            if (next == null)
-            {
-                next = document!.CreateElement(part);
-                current.AppendChild(next);
-            }
-
-            current = next;
-        }
-
-        current.InnerText = value;
-        return current;
-    }
     private void CourseList_SelectedIndexChanged(object? sender, EventArgs e)
     {
         if (courseList.SelectedItem is not CourseListItem item)
@@ -830,16 +612,10 @@ public class MainForm : Form
         LoadQuickFields();
     }
 
-    private void CourseGrid_PropertyValueChanged(object s, PropertyValueChangedEventArgs e)
+    private void CourseGrid_PropertyValueChanged(object? s, PropertyValueChangedEventArgs e)
     {
         if (selectedCourse != null)
-        {
-            if (!serviceStates.ContainsKey(selectedCourse))
-                serviceStates[selectedCourse] = ServiceState.Unchanged;
-
-            if (serviceStates[selectedCourse] == ServiceState.Unchanged)
-                serviceStates[selectedCourse] = ServiceState.Updated;
-        }
+            serviceManager.MarkAsUpdated(selectedCourse);
 
         RefreshSelectedCourseTitle();
         RefreshStatusLists();
@@ -863,7 +639,7 @@ public class MainForm : Form
 
         int index = 0;
 
-        foreach (var entry in serviceStates.ToList())
+        foreach (var entry in serviceManager.ServiceStates.ToList())
         {
             if (entry.Key.ParentNode == null)
                 continue;
@@ -877,7 +653,7 @@ public class MainForm : Form
                 updatedServicesList.Items.Add(title);
         }
 
-        foreach (var deleted in deletedServices)
+        foreach (var deleted in serviceManager.DeletedServices)
         {
             deletedServicesList.Items.Add($"{deleted.ProductId} | {deleted.Title}");
         }
@@ -891,7 +667,7 @@ public class MainForm : Form
     {
         var title = BuildServiceTitle(service, index);
 
-        if (!serviceStates.TryGetValue(service, out var state))
+        if (!serviceManager.ServiceStates.TryGetValue(service, out var state))
             return title;
 
         return state switch
@@ -925,20 +701,20 @@ public class MainForm : Form
 
     private static string BuildServiceTitle(XmlNode service, int index)
     {
-        var productId = GetChildText(service, "PRODUCT_ID");
+        var productId = service.GetChildText("PRODUCT_ID");
 
-        var title = GetTextByPath(service, "SERVICE_DETAILS/TITLE");
+        var title = service.GetTextByPath("SERVICE_DETAILS/TITLE");
 
-        var city = GetTextByPath(service,
+        var city = service.GetTextByPath(
             "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/CITY");
 
-        var instructionTime = GetTextByPath(service,
+        var instructionTime = service.GetTextByPath(
             "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/EXTENDED_INFO/INSTRUCTION_TIME");
 
-        var educationType = GetTextByPath(service,
+        var educationType = service.GetTextByPath(
             "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/EXTENDED_INFO/EDUCATION_TYPE");
 
-        var startDate = GetTextByPath(service,
+        var startDate = service.GetTextByPath(
             "SERVICE_DETAILS/SERVICE_DATE/START_DATE");
 
         var category = BuildCourseCategory(city, instructionTime, educationType);
@@ -976,47 +752,23 @@ public class MainForm : Form
         return $"{cityText} - {timeText}";
     }
 
-    private static string? GetTextByPath(XmlNode startNode, string path)
-    {
-        var current = startNode;
-
-        foreach (var part in path.Split('/'))
-        {
-            var next = current.ChildNodes
-                .Cast<XmlNode>()
-                .FirstOrDefault(n => n.LocalName.Equals(part, StringComparison.OrdinalIgnoreCase));
-
-            if (next == null)
-                return null;
-
-            current = next;
-        }
-
-        return current.InnerText?.Trim();
-    }
-
     private static string ShortDate(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
-            return "";
+            return string.Empty;
 
-        if (value.Length >= 10)
-            return value[..10];
-
-        return value;
+        return value.Length >= 10 ? value[..10] : value;
     }
+
     private void AddEmptyCourse(object? sender, EventArgs e)
     {
-        if (document == null)
+        if (serviceManager.Document == null)
         {
             MessageBox.Show("Bitte zuerst XML öffnen.");
             return;
         }
 
-        var existingService = document
-            .GetElementsByTagName("*")
-            .Cast<XmlNode>()
-            .FirstOrDefault(IsServiceNode);
+        var existingService = serviceManager.GetServiceNodes().FirstOrDefault();
 
         if (existingService == null)
         {
@@ -1024,29 +776,9 @@ public class MainForm : Form
             return;
         }
 
-        var insertParent = GetServiceInsertParent();
-
-        if (insertParent == null)
-        {
-            MessageBox.Show("Weder NEW_CATALOG noch UPDATE_CATALOG gefunden.");
-            return;
-        }
-
         try
         {
-            var newService = existingService.CloneNode(deep: true);
-            ClearValues(newService);
-
-            var newProductId = GenerateNewProductId();
-            SetChildText(newService, "PRODUCT_ID", newProductId);
-
-            if (GetUpdateCatalogNode() != null)
-                SetAttribute(newService, "mode", "new");
-
-            insertParent.AppendChild(newService);
-            serviceStates[newService] = ServiceState.New;
-            pendingTemplateFields[newService] =
-                ImportantFields.Select(f => f.Path).ToHashSet();
+            serviceManager.AddEmptyService(existingService);
             LoadCourses();
             courseList.SelectedIndex = courseList.Items.Count - 1;
             RefreshStatusLists();
@@ -1059,13 +791,13 @@ public class MainForm : Form
 
     private void AddCourseFromTemplate(object? sender, EventArgs e)
     {
-        if (document == null)
+        if (serviceManager.Document == null)
         {
             MessageBox.Show("Bitte zuerst XML öffnen.");
             return;
         }
 
-        var templates = Directory.GetFiles(servicesTemplateFolder, "*.xml");
+        var templates = templateRepository.GetTemplateFiles();
 
         if (templates.Length == 0)
         {
@@ -1078,35 +810,9 @@ public class MainForm : Form
         if (picker.ShowDialog() != DialogResult.OK || picker.SelectedTemplatePath == null)
             return;
 
-        var insertParent = GetServiceInsertParent();
-
-        if (insertParent == null)
-        {
-            MessageBox.Show("Weder NEW_CATALOG noch UPDATE_CATALOG gefunden.");
-            return;
-        }
-
         try
         {
-            var templateDoc = new XmlDocument();
-            templateDoc.PreserveWhitespace = true;
-            templateDoc.Load(picker.SelectedTemplatePath);
-
-            if (templateDoc.DocumentElement == null)
-                return;
-
-            var importedService = document.ImportNode(templateDoc.DocumentElement, deep: true);
-
-            var newProductId = GenerateNewProductId();
-            SetChildText(importedService, "PRODUCT_ID", newProductId);
-
-            if (GetUpdateCatalogNode() != null)
-                SetAttribute(importedService, "mode", "new");
-
-            insertParent.AppendChild(importedService);
-            serviceStates[importedService] = ServiceState.New;
-            pendingTemplateFields[importedService] =
-                ImportantFields.Select(f => f.Path).ToHashSet();
+            serviceManager.AddServiceFromTemplate(picker.SelectedTemplatePath);
             LoadCourses();
             courseList.SelectedIndex = courseList.Items.Count - 1;
             RefreshStatusLists();
@@ -1127,7 +833,7 @@ public class MainForm : Form
             return;
         }
 
-        var productId = GetChildText(selectedCourse, "PRODUCT_ID");
+        var productId = selectedCourse.GetChildText("PRODUCT_ID");
 
         if (string.IsNullOrWhiteSpace(productId))
         {
@@ -1147,43 +853,17 @@ public class MainForm : Form
         if (result != DialogResult.Yes)
             return;
 
-        var isNewService = serviceStates.TryGetValue(selectedCourse, out var state)
-            && state == ServiceState.New;
-
-        var updateCatalog = GetUpdateCatalogNode();
-
-        if (updateCatalog != null && !isNewService)
+        try
         {
-            var deleteNode = GetOrCreateUpdateChild("DELETE");
-
-            var deleteService = document!.CreateElement("SERVICE");
-
-            var productIdNode = document.CreateElement("PRODUCT_ID");
-            productIdNode.InnerText = productId;
-
-            deleteService.AppendChild(productIdNode);
-            deleteNode.AppendChild(deleteService);
-
-            deletedServices.Add(new DeletedServiceInfo(productId, title));
-
-            selectedCourse.ParentNode?.RemoveChild(selectedCourse);
-            serviceStates.Remove(selectedCourse);
-
-            MessageBox.Show("SERVICE wurde entfernt und als DELETE/SERVICE vorgemerkt.");
-        }
-        else
-        {
-            selectedCourse.ParentNode?.RemoveChild(selectedCourse);
-            serviceStates.Remove(selectedCourse);
-
-            if (!isNewService)
-                deletedServices.Add(new DeletedServiceInfo(productId, title));
-
+            serviceManager.RemoveService(selectedCourse, title);
             MessageBox.Show("SERVICE wurde entfernt.");
+            LoadCourses();
+            RefreshStatusLists();
         }
-
-        LoadCourses();
-        RefreshStatusLists();
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message);
+        }
     }
 
     private void SaveTemplate(object? sender, EventArgs e)
@@ -1210,264 +890,14 @@ public class MainForm : Form
         MessageBox.Show($"Vorlage gespeichert:\n{path}");
     }
 
-    private XmlNode? FindCatalogNode(string name)
-    {
-        if (document == null)
-            return null;
 
-        return document
-            .GetElementsByTagName("*")
-            .Cast<XmlNode>()
-            .FirstOrDefault(n => n.LocalName.Equals(name, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private XmlNode? GetNewCatalogNode()
-    {
-        return FindCatalogNode("NEW_CATALOG");
-    }
-
-    private XmlNode? GetUpdateCatalogNode()
-    {
-        return FindCatalogNode("UPDATE_CATALOG");
-    }
-
-    private XmlNode GetOrCreateUpdateChild(string childName)
-    {
-        var updateCatalog = GetUpdateCatalogNode();
-
-        if (updateCatalog == null)
-            throw new Exception("Kein UPDATE_CATALOG gefunden.");
-
-        var existing = updateCatalog.ChildNodes
-            .Cast<XmlNode>()
-            .FirstOrDefault(n => n.LocalName.Equals(childName, StringComparison.OrdinalIgnoreCase));
-
-        if (existing != null)
-            return existing;
-
-        var newNode = document!.CreateElement(childName);
-
-        if (childName.Equals("DELETE", StringComparison.OrdinalIgnoreCase))
-        {
-            var newElement = updateCatalog.ChildNodes
-                .Cast<XmlNode>()
-                .FirstOrDefault(n => n.LocalName.Equals("NEW", StringComparison.OrdinalIgnoreCase));
-
-            if (newElement != null)
-                updateCatalog.InsertBefore(newNode, newElement);
-            else
-                updateCatalog.AppendChild(newNode);
-        }
-        else
-        {
-            updateCatalog.AppendChild(newNode);
-        }
-
-        return newNode;
-    }
-
-    private XmlNode? GetServiceInsertParent()
-    {
-        var newCatalog = GetNewCatalogNode();
-
-        if (newCatalog != null)
-            return newCatalog;
-
-        var updateCatalog = GetUpdateCatalogNode();
-
-        if (updateCatalog != null)
-            return GetOrCreateUpdateChild("NEW");
-
-        return null;
-    }
-
-    private static string? GetChildText(XmlNode node, string childName)
-    {
-        var child = node.ChildNodes
-            .Cast<XmlNode>()
-            .FirstOrDefault(n => n.LocalName.Equals(childName, StringComparison.OrdinalIgnoreCase));
-
-        return child?.InnerText?.Trim();
-    }
-
-    private void SetChildText(XmlNode node, string childName, string value)
-    {
-        var child = node.ChildNodes
-            .Cast<XmlNode>()
-            .FirstOrDefault(n => n.LocalName.Equals(childName, StringComparison.OrdinalIgnoreCase));
-
-        if (child == null)
-        {
-            child = document!.CreateElement(childName);
-            node.AppendChild(child);
-        }
-
-        child.InnerText = value;
-    }
-
-    private void SetAttribute(XmlNode node, string name, string value)
-    {
-        if (document == null)
-            return;
-
-        var attr = node.Attributes?[name];
-
-        if (attr == null)
-        {
-            attr = document.CreateAttribute(name);
-            node.Attributes?.Append(attr);
-        }
-
-        attr.Value = value;
-    }
-
-    private string AskForProductId()
-    {
-        var productId = Prompt.ShowDialog("Neue PRODUCT_ID:", "PRODUCT_ID setzen");
-
-        if (string.IsNullOrWhiteSpace(productId))
-            throw new Exception("PRODUCT_ID darf nicht leer sein.");
-
-        return productId.Trim();
-    }
-
-    private static void ClearValues(XmlNode node)
-    {
-        foreach (XmlNode child in node.ChildNodes)
-        {
-            if (child.NodeType != XmlNodeType.Element)
-                continue;
-
-            if (HasElementChildren(child))
-                ClearValues(child);
-            else
-                child.InnerText = "";
-        }
-
-        if (node.Attributes != null)
-        {
-            foreach (XmlAttribute attr in node.Attributes)
-                attr.Value = "";
-        }
-    }
-
-    private static bool HasElementChildren(XmlNode node)
-    {
-        foreach (XmlNode child in node.ChildNodes)
-        {
-            if (child.NodeType == XmlNodeType.Element)
-                return true;
-        }
-
-        return false;
-    }
     private XmlDocument BuildExportDocument()
     {
-        if (document?.DocumentElement == null)
-            throw new Exception("Kein XML geladen.");
-
-        bool hasDeletes = deletedServices.Count > 0;
-
-        return hasDeletes
-            ? BuildUpdateCatalogExport()
-            : BuildNewCatalogExport();
-    }
-
-    private XmlDocument BuildNewCatalogExport()
-    {
-        var exportDoc = new XmlDocument();
-
-        var declaration = exportDoc.CreateXmlDeclaration("1.0", "utf-8", null);
-        exportDoc.AppendChild(declaration);
-
-        var root = exportDoc.CreateElement("NEW_CATALOG");
-        root.SetAttribute("FULLCATALOG", "true");
-        exportDoc.AppendChild(root);
-
-        var services = GetActiveServices();
-
-        foreach (var service in services)
-        {
-            var imported = exportDoc.ImportNode(service, deep: true);
-            SetAttributeForDocument(exportDoc, imported, "mode", "new");
-            root.AppendChild(imported);
-        }
-
-        return exportDoc;
-    }
-
-    private XmlDocument BuildUpdateCatalogExport()
-    {
-        var exportDoc = new XmlDocument();
-
-        var declaration = exportDoc.CreateXmlDeclaration("1.0", "utf-8", null);
-        exportDoc.AppendChild(declaration);
-
-        var root = exportDoc.CreateElement("UPDATE_CATALOG");
-        root.SetAttribute("seq_number", "1");
-        exportDoc.AppendChild(root);
-
-        var deleteNode = exportDoc.CreateElement("DELETE");
-        root.AppendChild(deleteNode);
-
-        foreach (var deleted in deletedServices)
-        {
-            var deleteService = exportDoc.CreateElement("SERVICE");
-
-            var productIdNode = exportDoc.CreateElement("PRODUCT_ID");
-            productIdNode.InnerText = deleted.ProductId;
-
-            deleteService.AppendChild(productIdNode);
-            deleteNode.AppendChild(deleteService);
-        }
-
-        var newNode = exportDoc.CreateElement("NEW");
-        root.AppendChild(newNode);
-
-        var servicesToExport = GetActiveServices()
-            .Where(service =>
-                serviceStates.TryGetValue(service, out var state)
-                && (state == ServiceState.New || state == ServiceState.Updated))
-            .ToList();
-
-        foreach (var service in servicesToExport)
-        {
-            var imported = exportDoc.ImportNode(service, deep: true);
-            SetAttributeForDocument(exportDoc, imported, "mode", "new");
-            newNode.AppendChild(imported);
-        }
-
-        return exportDoc;
-    }
-
-    private List<XmlNode> GetActiveServices()
-    {
-        if (document == null)
-            return new List<XmlNode>();
-
-        return document
-            .GetElementsByTagName("*")
-            .Cast<XmlNode>()
-            .Where(IsServiceNode)
-            .Where(n => n.ParentNode != null)
-            .ToList();
-    }
-
-    private static void SetAttributeForDocument(XmlDocument doc, XmlNode node, string name, string value)
-    {
-        var attr = node.Attributes?[name];
-
-        if (attr == null)
-        {
-            attr = doc.CreateAttribute(name);
-            node.Attributes?.Append(attr);
-        }
-
-        attr.Value = value;
+        return serviceManager.BuildExportDocument();
     }
     private void ExportXml(object? sender, EventArgs e)
     {
-        if (document == null)
+        if (serviceManager.Document == null)
         {
             MessageBox.Show("Bitte zuerst XML öffnen.");
             return;
@@ -1495,7 +925,7 @@ public class MainForm : Form
 
     private void ValidateXml(object? sender, EventArgs e)
     {
-        if (document == null)
+        if (serviceManager.Document == null)
         {
             MessageBox.Show("Bitte zuerst XML öffnen.");
             return;
@@ -1509,15 +939,7 @@ public class MainForm : Form
 
         try
         {
-            var schemas = new XmlSchemaSet();
-            schemas.Add(null, dialog.FileName);
-
-            document.Schemas = schemas;
-            document.Validate((_, args) =>
-            {
-                throw new Exception(args.Message);
-            });
-
+            serviceManager.ValidateWithSchema(dialog.FileName);
             MessageBox.Show("XML ist gültig laut XSD.");
         }
         catch (Exception ex)
@@ -1527,20 +949,3 @@ public class MainForm : Form
     }
 }
 
-public class CourseListItem
-{
-    public XmlNode Node { get; }
-
-    private readonly string title;
-
-    public CourseListItem(XmlNode node, string title)
-    {
-        Node = node;
-        this.title = title;
-    }
-
-    public override string ToString()
-    {
-        return title;
-    }
-}
