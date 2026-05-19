@@ -86,10 +86,39 @@ public class XmlServiceManager
         templateDoc.PreserveWhitespace = true;
         templateDoc.Load(templatePath);
 
-        if (templateDoc.DocumentElement == null)
+        var templateElement = templateDoc.DocumentElement;
+        if (templateElement == null)
             throw new InvalidOperationException("Vorlage enthält kein SERVICE-Element.");
 
-        var importedService = document.ImportNode(templateDoc.DocumentElement, deep: true);
+        var importedService = document!.ImportNode(templateElement, deep: true);
+
+        var newProductId = GenerateNewProductId();
+        importedService.SetChildText("PRODUCT_ID", newProductId);
+
+        if (GetUpdateCatalogNode() != null)
+            importedService.SetAttribute("mode", "new");
+
+        var insertParent = GetServiceInsertParent();
+
+        if (insertParent == null)
+            throw new InvalidOperationException("Weder NEW_CATALOG noch UPDATE_CATALOG gefunden.");
+
+        insertParent.AppendChild(importedService);
+        serviceStates[importedService] = ServiceState.New;
+        pendingTemplateFields[importedService] = importantFields.Select(f => f.Path).ToHashSet();
+
+        return importedService;
+    }
+
+    public XmlNode AddServiceFromConfiguredTemplate(XmlDocument configuredTemplate)
+    {
+        EnsureDocumentLoaded();
+
+        var templateElement = configuredTemplate.DocumentElement;
+        if (templateElement == null)
+            throw new InvalidOperationException("Konfigurierte Vorlage enthält kein SERVICE-Element.");
+
+        var importedService = document!.ImportNode(templateElement, deep: true);
 
         var newProductId = GenerateNewProductId();
         importedService.SetChildText("PRODUCT_ID", newProductId);

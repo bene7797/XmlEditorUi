@@ -26,12 +26,40 @@ public class MainForm : Form
     private readonly TabPage serviceEditorTab = new("Service bearbeiten");
     private readonly TabPage templateEditorTab = new("Vorlagen bearbeiten");
 
+    // Template Editor - Neue Tab-Struktur
+    private readonly TabControl templateSubTabs = new();
+    private readonly TabPage mainTemplateTab = new("Main Template");
+    private readonly TabPage courseTypeTemplateTab = new("Beschäftigungsart");
+    private readonly TabPage locationTemplateTab = new("Ort");
+
+    // Main Template Tab
+    private readonly DataGridView mainTemplateGrid = new();
+    private readonly PropertyGrid mainTemplatePropertyGrid = new();
+    private readonly Button saveMainTemplateButton = new();
+
+    // Beschäftigungsart Tab
+    private readonly ComboBox courseTypeCombo = new();
+    private readonly DataGridView courseTypeQuickGrid = new();
+    private readonly PropertyGrid courseTypePropertyGrid = new();
+    private readonly Button saveCourseTypeButton = new();
+
+    // Ort Tab
+    private readonly ComboBox locationCombo = new();
+    private readonly DataGridView locationQuickGrid = new();
+    private readonly PropertyGrid locationPropertyGrid = new();
+    private readonly Button saveLocationButton = new();
+
+    // Alte Elemente (deprecated aber noch vorhanden für Kompatibilität)
     private readonly TreeView templateTree = new();
     private readonly DataGridView templateQuickGrid = new();
     private readonly PropertyGrid templatePropertyGrid = new();
 
     private readonly Button saveTemplateChangesButton = new();
     private readonly Button reloadTemplatesButton = new();
+
+    // Manager für Template-Typen
+    private CourseTypeTemplateManager? courseTypeTemplateManager;
+    private LocationTemplateManager? locationTemplateManager;
 
     private readonly string servicesTemplateFolder =
         Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "templates", "services");
@@ -201,6 +229,8 @@ public class MainForm : Form
         Directory.CreateDirectory(profilesFolder);
 
         profileManager = new TemplateProfileManager(profilesFolder);
+        courseTypeTemplateManager = new CourseTypeTemplateManager(templateRepository);
+        locationTemplateManager = new LocationTemplateManager(templateRepository);
 
         BuildTemplateEditorTab();
         LoadTemplateProfilesAndTree();
@@ -208,102 +238,411 @@ public class MainForm : Form
 
     private void BuildTemplateEditorTab()
     {
-        templateTree.Left = 10;
-        templateTree.Top = 10;
-        templateTree.Width = 330;
-        templateTree.Height = 650;
-        templateTree.AfterSelect += TemplateTree_AfterSelect;
+        // Erstelle Sub-TabControl für die drei Template-Typen
+        templateSubTabs.Dock = DockStyle.Fill;
+        templateSubTabs.Alignment = TabAlignment.Top;
 
-        reloadTemplatesButton.Text = "Vorlagen neu laden";
-        reloadTemplatesButton.Left = 360;
-        reloadTemplatesButton.Top = 10;
-        reloadTemplatesButton.Width = 150;
-        reloadTemplatesButton.Click += (_, _) => LoadTemplateProfilesAndTree();
+        // Initialisiere die drei Tabs
+        templateSubTabs.TabPages.Add(mainTemplateTab);
+        templateSubTabs.TabPages.Add(courseTypeTemplateTab);
+        templateSubTabs.TabPages.Add(locationTemplateTab);
 
-        saveTemplateChangesButton.Text = "Vorlage speichern";
-        saveTemplateChangesButton.Left = 520;
-        saveTemplateChangesButton.Top = 10;
-        saveTemplateChangesButton.Width = 150;
-        saveTemplateChangesButton.Click += SaveSelectedTemplate;
+        // Main Template Tab
+        BuildMainTemplateTab();
 
-        templateQuickGrid.Left = 360;
-        templateQuickGrid.Top = 50;
-        templateQuickGrid.Width = 760;
-        templateQuickGrid.Height = 230;
-        templateQuickGrid.AllowUserToAddRows = false;
-        templateQuickGrid.AllowUserToDeleteRows = false;
-        templateQuickGrid.RowHeadersVisible = false;
-        templateQuickGrid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-        templateQuickGrid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-        templateQuickGrid.Columns.Add("Field", "Feld");
-        templateQuickGrid.Columns.Add("Value", "Wert");
-        templateQuickGrid.Columns["Field"]!.ReadOnly = true;
-        templateQuickGrid.CellValueChanged += TemplateQuickGrid_CellValueChanged;
+        // Beschäftigungsart Tab
+        BuildCourseTypeTemplateTab();
 
-        templatePropertyGrid.Left = 360;
-        templatePropertyGrid.Top = 300;
-        templatePropertyGrid.Width = 760;
-        templatePropertyGrid.Height = 360;
-        templatePropertyGrid.ToolbarVisible = false;
-        templatePropertyGrid.HelpVisible = false;
+        // Ort Tab
+        BuildLocationTemplateTab();
 
-        templateEditorTab.Controls.Add(templateTree);
-        templateEditorTab.Controls.Add(reloadTemplatesButton);
-        templateEditorTab.Controls.Add(saveTemplateChangesButton);
-        templateEditorTab.Controls.Add(templateQuickGrid);
-        templateEditorTab.Controls.Add(templatePropertyGrid);
+        templateEditorTab.Controls.Add(templateSubTabs);
+    }
+
+    private void BuildMainTemplateTab()
+    {
+        saveMainTemplateButton.Text = "Main Template speichern";
+        saveMainTemplateButton.Left = 10;
+        saveMainTemplateButton.Top = 10;
+        saveMainTemplateButton.Width = 150;
+        saveMainTemplateButton.Click += SaveMainTemplate;
+
+        mainTemplateGrid.Left = 10;
+        mainTemplateGrid.Top = 50;
+        mainTemplateGrid.Width = 1160;
+        mainTemplateGrid.Height = 240;
+        mainTemplateGrid.AllowUserToAddRows = false;
+        mainTemplateGrid.AllowUserToDeleteRows = false;
+        mainTemplateGrid.RowHeadersVisible = false;
+        mainTemplateGrid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+        mainTemplateGrid.Columns.Add("Field", "Feld");
+        mainTemplateGrid.Columns.Add("Value", "Wert");
+        mainTemplateGrid.Columns["Field"]!.ReadOnly = true;
+        mainTemplateGrid.CellValueChanged += (s, e) => MainTemplateGrid_CellValueChanged(e);
+
+        mainTemplatePropertyGrid.Left = 10;
+        mainTemplatePropertyGrid.Top = 300;
+        mainTemplatePropertyGrid.Width = 1160;
+        mainTemplatePropertyGrid.Height = 330;
+        mainTemplatePropertyGrid.ToolbarVisible = false;
+        mainTemplatePropertyGrid.HelpVisible = false;
+
+        mainTemplateTab.Controls.Add(saveMainTemplateButton);
+        mainTemplateTab.Controls.Add(mainTemplateGrid);
+        mainTemplateTab.Controls.Add(mainTemplatePropertyGrid);
+    }
+
+    private void BuildCourseTypeTemplateTab()
+    {
+        var comboLabel = new Label { Text = "Beschäftigungsart:", Left = 10, Top = 15, Width = 120, Height = 20 };
+
+        courseTypeCombo.Left = 130;
+        courseTypeCombo.Top = 10;
+        courseTypeCombo.Width = 200;
+        courseTypeCombo.DropDownStyle = ComboBoxStyle.DropDownList;
+        courseTypeCombo.SelectedIndexChanged += (s, e) => LoadCourseTypeTemplate();
+
+        saveCourseTypeButton.Text = "Template speichern";
+        saveCourseTypeButton.Left = 350;
+        saveCourseTypeButton.Top = 10;
+        saveCourseTypeButton.Width = 150;
+        saveCourseTypeButton.Click += SaveCourseTypeTemplate;
+
+        courseTypeQuickGrid.Left = 10;
+        courseTypeQuickGrid.Top = 50;
+        courseTypeQuickGrid.Width = 1160;
+        courseTypeQuickGrid.Height = 240;
+        courseTypeQuickGrid.AllowUserToAddRows = false;
+        courseTypeQuickGrid.AllowUserToDeleteRows = false;
+        courseTypeQuickGrid.RowHeadersVisible = false;
+        courseTypeQuickGrid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+        courseTypeQuickGrid.Columns.Add("Field", "Feld");
+        courseTypeQuickGrid.Columns.Add("Value", "Wert");
+        courseTypeQuickGrid.Columns["Field"]!.ReadOnly = true;
+        courseTypeQuickGrid.CellValueChanged += (s, e) => CourseTypeQuickGrid_CellValueChanged(e);
+
+        courseTypePropertyGrid.Left = 10;
+        courseTypePropertyGrid.Top = 300;
+        courseTypePropertyGrid.Width = 1160;
+        courseTypePropertyGrid.Height = 330;
+        courseTypePropertyGrid.ToolbarVisible = false;
+        courseTypePropertyGrid.HelpVisible = false;
+
+        courseTypeTemplateTab.Controls.Add(comboLabel);
+        courseTypeTemplateTab.Controls.Add(courseTypeCombo);
+        courseTypeTemplateTab.Controls.Add(saveCourseTypeButton);
+        courseTypeTemplateTab.Controls.Add(courseTypeQuickGrid);
+        courseTypeTemplateTab.Controls.Add(courseTypePropertyGrid);
+    }
+
+    private void BuildLocationTemplateTab()
+    {
+        var comboLabel = new Label { Text = "Ort:", Left = 10, Top = 15, Width = 120, Height = 20 };
+
+        locationCombo.Left = 130;
+        locationCombo.Top = 10;
+        locationCombo.Width = 200;
+        locationCombo.DropDownStyle = ComboBoxStyle.DropDownList;
+        locationCombo.SelectedIndexChanged += (s, e) => LoadLocationTemplate();
+
+        saveLocationButton.Text = "Template speichern";
+        saveLocationButton.Left = 350;
+        saveLocationButton.Top = 10;
+        saveLocationButton.Width = 150;
+        saveLocationButton.Click += SaveLocationTemplate;
+
+        locationQuickGrid.Left = 10;
+        locationQuickGrid.Top = 50;
+        locationQuickGrid.Width = 1160;
+        locationQuickGrid.Height = 240;
+        locationQuickGrid.AllowUserToAddRows = false;
+        locationQuickGrid.AllowUserToDeleteRows = false;
+        locationQuickGrid.RowHeadersVisible = false;
+        locationQuickGrid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+        locationQuickGrid.Columns.Add("Field", "Feld");
+        locationQuickGrid.Columns.Add("Value", "Wert");
+        locationQuickGrid.Columns["Field"]!.ReadOnly = true;
+        locationQuickGrid.CellValueChanged += (s, e) => LocationQuickGrid_CellValueChanged(e);
+
+        locationPropertyGrid.Left = 10;
+        locationPropertyGrid.Top = 300;
+        locationPropertyGrid.Width = 1160;
+        locationPropertyGrid.Height = 330;
+        locationPropertyGrid.ToolbarVisible = false;
+        locationPropertyGrid.HelpVisible = false;
+
+        locationTemplateTab.Controls.Add(comboLabel);
+        locationTemplateTab.Controls.Add(locationCombo);
+        locationTemplateTab.Controls.Add(saveLocationButton);
+        locationTemplateTab.Controls.Add(locationQuickGrid);
+        locationTemplateTab.Controls.Add(locationPropertyGrid);
     }
 
     private void LoadTemplateProfilesAndTree()
     {
-        if (profileManager == null)
+        if (profileManager == null || courseTypeTemplateManager == null || locationTemplateManager == null)
             return;
 
         locationProfiles = profileManager.LoadLocations();
         courseTypeProfiles = profileManager.LoadCourseTypes();
 
-        templateTree.Nodes.Clear();
+        // Lade Main Template
+        LoadMainTemplate();
 
+        // Lade Beschäftigungsart-Vorlagen
+        var courseTypes = courseTypeTemplateManager.GetAvailableCourseTypeNames();
+        courseTypeCombo.Items.Clear();
+        foreach (var ct in courseTypes)
+            courseTypeCombo.Items.Add(ct);
+        if (courseTypeCombo.Items.Count > 0)
+            courseTypeCombo.SelectedIndex = 0;
+
+        // Lade Ort-Vorlagen
+        var locations = locationTemplateManager.GetAvailableLocationNames();
+        locationCombo.Items.Clear();
+        foreach (var loc in locations)
+            locationCombo.Items.Add(loc);
+        if (locationCombo.Items.Count > 0)
+            locationCombo.SelectedIndex = 0;
+
+        // Alte TreeView (deprecated, aber noch vorhanden)
+        templateTree.Nodes.Clear();
         var root = new TreeNode("Vorlagen");
         templateTree.Nodes.Add(root);
+        root.Expand();
+    }
 
-        var files = templateRepository.GetTemplateFiles();
+    private void LoadMainTemplate()
+    {
+        var templates = templateRepository.GetTemplateFiles();
+        var mainTemplate = templates.FirstOrDefault(t =>
+            Path.GetFileName(t).Equals("Main.xml", StringComparison.OrdinalIgnoreCase));
 
-        foreach (var file in files)
+        if (mainTemplate == null)
         {
-            var doc = new XmlDocument();
-            doc.Load(file);
-
-            if (doc.DocumentElement == null)
-                continue;
-
-            var service = doc.DocumentElement;
-
-            var city = service.GetTextByPath(
-                "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/CITY") ?? "Ort ?";
-
-            var time = service.GetTextByPath(
-                "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/EXTENDED_INFO/INSTRUCTION_TIME") ?? "Zeit ?";
-
-            var educationType = service.GetTextByPath(
-                "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/EXTENDED_INFO/EDUCATION_TYPE") ?? "";
-
-            var typeName = educationType.Contains("Extern", StringComparison.OrdinalIgnoreCase)
-                ? "Externenprüfung"
-                : time;
-
-            var cityNode = FindOrCreateTreeNode(root, city);
-            var typeNode = FindOrCreateTreeNode(cityNode, typeName);
-
-            var templateNode = new TreeNode(Path.GetFileNameWithoutExtension(file))
-            {
-                Tag = file
-            };
-
-            typeNode.Nodes.Add(templateNode);
+            MessageBox.Show("Main.xml nicht gefunden");
+            return;
         }
 
-        root.Expand();
+        var doc = new XmlDocument();
+        doc.PreserveWhitespace = true;
+        doc.Load(mainTemplate);
+
+        if (doc.DocumentElement == null)
+            return;
+
+        // Lade Quick Fields
+        mainTemplateGrid.Rows.Clear();
+        var service = doc.DocumentElement;
+
+        // Zeige alle wichtigen Felder
+        var allFields = CourseTypeTemplateFields.EssentialFields
+            .Concat(LocationTemplateFields.EssentialFields)
+            .Distinct()
+            .ToList();
+
+        foreach (var field in allFields)
+        {
+            var value = service.GetTextByPath(field.Path) ?? string.Empty;
+            var rowIndex = mainTemplateGrid.Rows.Add(field.Label, value);
+            var row = mainTemplateGrid.Rows[rowIndex];
+            row.Tag = field.Path;
+        }
+
+        mainTemplatePropertyGrid.SelectedObject = new CourseEditableObject(service, onlyFilledFields: true);
+    }
+
+    private void LoadCourseTypeTemplate()
+    {
+        if (courseTypeCombo.SelectedItem is not string courseTypeName || courseTypeTemplateManager == null)
+            return;
+
+        var template = courseTypeTemplateManager.GetOrCreateCourseTypeTemplate(courseTypeName);
+
+        if (template == null)
+        {
+            MessageBox.Show($"Template für {courseTypeName} nicht gefunden");
+            return;
+        }
+
+        var (path, doc) = template.Value;
+
+        if (doc.DocumentElement == null)
+            return;
+
+        // Speichere für Speichern
+        courseTypeTemplateTab.Tag = (path, doc);
+
+        // Lade Quick Fields
+        courseTypeQuickGrid.Rows.Clear();
+        var service = doc.DocumentElement;
+
+        foreach (var field in CourseTypeTemplateFields.EssentialFields)
+        {
+            var value = service.GetTextByPath(field.Path) ?? string.Empty;
+            var rowIndex = courseTypeQuickGrid.Rows.Add(field.Label, value);
+            var row = courseTypeQuickGrid.Rows[rowIndex];
+            row.Tag = field.Path;
+        }
+
+        courseTypePropertyGrid.SelectedObject = new CourseEditableObject(service, onlyFilledFields: true);
+    }
+
+    private void LoadLocationTemplate()
+    {
+        if (locationCombo.SelectedItem is not string locationName || locationTemplateManager == null)
+            return;
+
+        var template = locationTemplateManager.GetOrCreateLocationTemplate(locationName);
+
+        if (template == null)
+        {
+            MessageBox.Show($"Template für {locationName} nicht gefunden");
+            return;
+        }
+
+        var (path, doc) = template.Value;
+
+        if (doc.DocumentElement == null)
+            return;
+
+        // Speichere für Speichern
+        locationTemplateTab.Tag = (path, doc);
+
+        // Lade Quick Fields
+        locationQuickGrid.Rows.Clear();
+        var service = doc.DocumentElement;
+
+        foreach (var field in LocationTemplateFields.EssentialFields)
+        {
+            var value = service.GetTextByPath(field.Path) ?? string.Empty;
+            var rowIndex = locationQuickGrid.Rows.Add(field.Label, value);
+            var row = locationQuickGrid.Rows[rowIndex];
+            row.Tag = field.Path;
+        }
+
+        locationPropertyGrid.SelectedObject = new CourseEditableObject(service, onlyFilledFields: true);
+    }
+
+    private void MainTemplateGrid_CellValueChanged(DataGridViewCellEventArgs e)
+    {
+        if (e.RowIndex < 0 || e.ColumnIndex != 1)
+            return;
+
+        var templates = templateRepository.GetTemplateFiles();
+        var mainTemplate = templates.FirstOrDefault(t =>
+            Path.GetFileName(t).Equals("Main.xml", StringComparison.OrdinalIgnoreCase));
+
+        if (mainTemplate == null)
+            return;
+
+        var doc = new XmlDocument();
+        doc.PreserveWhitespace = true;
+        doc.Load(mainTemplate);
+
+        if (doc.DocumentElement == null)
+            return;
+
+        var row = mainTemplateGrid.Rows[e.RowIndex];
+        if (row.Tag is not string path)
+            return;
+
+        var newValue = row.Cells[1].Value?.ToString() ?? "";
+        doc.DocumentElement.SetNodeByPath(path, newValue);
+
+        mainTemplateTab.Tag = (mainTemplate, doc);
+    }
+
+    private void CourseTypeQuickGrid_CellValueChanged(DataGridViewCellEventArgs e)
+    {
+        if (e.RowIndex < 0 || e.ColumnIndex != 1)
+            return;
+
+        if (courseTypeTemplateTab.Tag is not (string path, XmlDocument doc))
+            return;
+
+        var row = courseTypeQuickGrid.Rows[e.RowIndex];
+        if (row.Tag is not string fieldPath)
+            return;
+
+        var newValue = row.Cells[1].Value?.ToString() ?? "";
+        doc.DocumentElement?.SetNodeByPath(fieldPath, newValue);
+    }
+
+    private void LocationQuickGrid_CellValueChanged(DataGridViewCellEventArgs e)
+    {
+        if (e.RowIndex < 0 || e.ColumnIndex != 1)
+            return;
+
+        if (locationTemplateTab.Tag is not (string path, XmlDocument doc))
+            return;
+
+        var row = locationQuickGrid.Rows[e.RowIndex];
+        if (row.Tag is not string fieldPath)
+            return;
+
+        var newValue = row.Cells[1].Value?.ToString() ?? "";
+        doc.DocumentElement?.SetNodeByPath(fieldPath, newValue);
+    }
+
+    private void SaveMainTemplate(object? sender, EventArgs e)
+    {
+        if (mainTemplateTab.Tag is not (string path, XmlDocument doc))
+        {
+            MessageBox.Show("Kein Template geladen");
+            return;
+        }
+
+        try
+        {
+            doc.Save(path);
+            MessageBox.Show("Main Template gespeichert");
+            LoadMainTemplate();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Fehler beim Speichern: {ex.Message}");
+        }
+    }
+
+    private void SaveCourseTypeTemplate(object? sender, EventArgs e)
+    {
+        if (courseTypeTemplateTab.Tag is not (string path, XmlDocument doc))
+        {
+            MessageBox.Show("Kein Template geladen");
+            return;
+        }
+
+        try
+        {
+            doc.Save(path);
+            MessageBox.Show("Template gespeichert");
+            LoadCourseTypeTemplate();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Fehler beim Speichern: {ex.Message}");
+        }
+    }
+
+    private void SaveLocationTemplate(object? sender, EventArgs e)
+    {
+        if (locationTemplateTab.Tag is not (string path, XmlDocument doc))
+        {
+            MessageBox.Show("Kein Template geladen");
+            return;
+        }
+
+        try
+        {
+            doc.Save(path);
+            MessageBox.Show("Template gespeichert");
+            LoadLocationTemplate();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Fehler beim Speichern: {ex.Message}");
+        }
     }
 
     private static TreeNode FindOrCreateTreeNode(TreeNode parent, string text)
@@ -797,32 +1136,70 @@ public class MainForm : Form
             return;
         }
 
-        var templates = templateRepository.GetTemplateFiles();
+        // Lade die Profile für Ort und Beschäftigungsart
+        var locations = profileManager!.LoadLocations();
+        var courseTypes = profileManager.LoadCourseTypes();
 
-        if (templates.Length == 0)
+        if (locations.Count == 0 || courseTypes.Count == 0)
         {
-            MessageBox.Show("Noch keine Vorlagen vorhanden.");
+            MessageBox.Show("Orte oder Beschäftigungsarten nicht konfiguriert.");
             return;
         }
 
-        using var picker = new TemplatePickerForm(templates);
+        // Öffne den Konfigurations-Dialog
+        using var configForm = new ServiceConfigurationForm(locations, courseTypes);
 
-        if (picker.ShowDialog() != DialogResult.OK || picker.SelectedTemplatePath == null)
+        if (configForm.ShowDialog() != DialogResult.OK ||
+            configForm.SelectedLocation == null ||
+            configForm.SelectedCourseType == null)
             return;
 
         try
         {
-            serviceManager.AddServiceFromTemplate(picker.SelectedTemplatePath);
+            // Finde das Haupttemplate
+            var mainTemplatePath = FindMainTemplate();
+
+            if (mainTemplatePath == null)
+            {
+                MessageBox.Show("Haupttemplate nicht gefunden. Stelle sicher, dass 'Main.xml' existiert.");
+                return;
+            }
+
+            // Lade und konfiguriere das Template
+            var configManager = new TemplateConfigurationManager(profileManager);
+            configManager.LoadMainTemplate(mainTemplatePath);
+            configManager.ApplyLocationConfiguration(configForm.SelectedLocation);
+            configManager.ApplyCourseTypeConfiguration(configForm.SelectedCourseType);
+
+            // Füge den konfigurierten Service hinzu
+            var configuredTemplate = configManager.GetConfiguredTemplate();
+            serviceManager.AddServiceFromConfiguredTemplate(configuredTemplate);
+
             LoadCourses();
             courseList.SelectedIndex = courseList.Items.Count - 1;
             RefreshStatusLists();
 
-            MessageBox.Show("Service aus Vorlage hinzugefügt. Jetzt variable Daten anpassen.");
+            MessageBox.Show($"Service erstellt für {configForm.SelectedLocation.Name} ({configForm.SelectedCourseType.Name}).\nBitte variable Daten anpassen.");
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            MessageBox.Show($"Fehler beim Erstellen des Services: {ex.Message}");
         }
+    }
+
+    private string? FindMainTemplate()
+    {
+        var templates = templateRepository.GetTemplateFiles();
+
+        // Versuche, Main.xml zu finden
+        var mainTemplate = templates.FirstOrDefault(t =>
+            Path.GetFileName(t).Equals("Main.xml", StringComparison.OrdinalIgnoreCase));
+
+        if (mainTemplate != null)
+            return mainTemplate;
+
+        // Falls nicht vorhanden, nutze das erste Template als Fallback
+        return templates.FirstOrDefault();
     }
 
     private void RemoveCourse(object? sender, EventArgs e)
