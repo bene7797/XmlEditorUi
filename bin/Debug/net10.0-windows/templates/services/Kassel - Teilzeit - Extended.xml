@@ -99,7 +99,7 @@ Das Bildungsangebot beinhaltet in Vollzeit 110 und in Teilzeit 180 Tage Praktiku
                             <TEACHING_LANGUAGES>eng</TEACHING_LANGUAGES>
                             <TEACHING_LANGUAGES_REMARKS>Unterricht erfolgt in Deutsch &amp; Englisch (also man sollte beides können). Darüber hinaus gibt es besondere Unterstützungsangebote auf Russisch + Arabisch. Letztere ersetzen nicht, dass man die beiden Hauptsprachen circa auf B2-Niveau beherrschen sollte.</TEACHING_LANGUAGES_REMARKS>
                             <EDUCATION_TYPE type="109">Umschulung</EDUCATION_TYPE>
-                        <INSTRUCTION_REMARKS>Montag bis Freitag 5,5 Stunden pro Tag in individueller Gleitzeit, aber mit einer Pflicht-Kernzeit von 09:30 Uhr bis 13:30 Uhr.</INSTRUCTION_REMARKS></EXTENDED_INFO>
+                        <INSTRUCTION_REMARKS>Montag bis Freitag 5,5 Stunden pro Tag in individueller Gleitzeit, aber mit einer Pflicht-Kernzeit von 09:30 Uhr bis 13:30 Uhr.</INSTRUCTION_REMARKS><DURATION type="rgewg" /></EXTENDED_INFO>
                         <MODULE_COURSE>
                             <MIN_PARTICIPANTS>1</MIN_PARTICIPANTS>
                             <MAX_PARTICIPANTS>12</MAX_PARTICIPANTS>

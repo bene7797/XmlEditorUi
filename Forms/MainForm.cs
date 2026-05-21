@@ -148,25 +148,26 @@ public class MainForm : Form
         addCourseButton.Left = 450;
         addCourseButton.Top = 525;
         addCourseButton.Width = 130;
-        addCourseButton.Click += AddEmptyCourse;
+        addCourseButton.Click += AddCourseFromTemplate;
 
-        addFromTemplateButton.Text = "Aus Vorlage";
+        addFromTemplateButton.Text = "Service Löschen";
         addFromTemplateButton.Left = 590;
         addFromTemplateButton.Top = 525;
         addFromTemplateButton.Width = 130;
-        addFromTemplateButton.Click += AddCourseFromTemplate;
+        addFromTemplateButton.Click += RemoveCourse;
 
-        saveTemplateButton.Text = "Vorlage speichern";
-        saveTemplateButton.Left = 730;
-        saveTemplateButton.Top = 525;
-        saveTemplateButton.Width = 150;
-        saveTemplateButton.Click += SaveTemplate;
 
-        removeCourseButton.Text = "Service entfernen";
-        removeCourseButton.Left = 890;
-        removeCourseButton.Top = 525;
-        removeCourseButton.Width = 150;
-        removeCourseButton.Click += RemoveCourse;
+        /*      saveTemplateButton.Text = "Vorlage speichern";
+             saveTemplateButton.Left = 730;
+             saveTemplateButton.Top = 525;
+             saveTemplateButton.Width = 150;
+             saveTemplateButton.Click += SaveTemplate;
+
+             removeCourseButton.Text = "Service entfernen";
+             removeCourseButton.Left = 890;
+             removeCourseButton.Top = 525;
+             removeCourseButton.Width = 150;
+             removeCourseButton.Click += RemoveCourse; */
 
         statusTabs.Left = 10;
         statusTabs.Top = 610;
@@ -184,8 +185,8 @@ public class MainForm : Form
         serviceEditorTab.Controls.Add(courseGrid);
         serviceEditorTab.Controls.Add(addCourseButton);
         serviceEditorTab.Controls.Add(addFromTemplateButton);
-        serviceEditorTab.Controls.Add(saveTemplateButton);
-        serviceEditorTab.Controls.Add(removeCourseButton);
+        // serviceEditorTab.Controls.Add(saveTemplateButton);
+        // serviceEditorTab.Controls.Add(removeCourseButton);
         serviceEditorTab.Controls.Add(statusTabs);
         serviceEditorTab.Controls.Add(quickFieldsGrid);
 
@@ -289,6 +290,7 @@ public class MainForm : Form
         mainTemplateGrid.Columns.Add("Value", "Wert");
         mainTemplateGrid.Columns["Field"]!.ReadOnly = true;
         mainTemplateGrid.CellValueChanged += (s, e) => MainTemplateGrid_CellValueChanged(e);
+        mainTemplateGrid.CellClick += MainTemplateGrid_CellClick;
 
         mainTemplatePropertyGrid.Left = 10;
         mainTemplatePropertyGrid.Top = 300;
@@ -330,6 +332,7 @@ public class MainForm : Form
         courseTypeQuickGrid.Columns.Add("Value", "Wert");
         courseTypeQuickGrid.Columns["Field"]!.ReadOnly = true;
         courseTypeQuickGrid.CellValueChanged += (s, e) => CourseTypeQuickGrid_CellValueChanged(e);
+        courseTypeQuickGrid.CellClick += CourseTypeQuickGrid_CellClick;
 
         courseTypePropertyGrid.Left = 10;
         courseTypePropertyGrid.Top = 300;
@@ -373,6 +376,7 @@ public class MainForm : Form
         locationQuickGrid.Columns.Add("Value", "Wert");
         locationQuickGrid.Columns["Field"]!.ReadOnly = true;
         locationQuickGrid.CellValueChanged += (s, e) => LocationQuickGrid_CellValueChanged(e);
+        locationQuickGrid.CellClick += LocationQuickGrid_CellClick;
 
         locationPropertyGrid.Left = 10;
         locationPropertyGrid.Top = 300;
@@ -408,6 +412,7 @@ public class MainForm : Form
         headerGrid.Columns.Add("Value", "Wert");
         headerGrid.Columns["Field"]!.ReadOnly = true;
         headerGrid.CellValueChanged += (s, e) => HeaderGrid_CellValueChanged(e);
+        headerGrid.CellClick += HeaderGrid_CellClick;
 
         headerPropertyGrid.Left = 10;
         headerPropertyGrid.Top = 300;
@@ -586,46 +591,24 @@ public class MainForm : Form
         doc.PreserveWhitespace = true;
         doc.Load(mainTemplate);
 
-        if (doc == null)
+        if (doc == null || doc.DocumentElement == null)
             return;
 
         // Speichere für Speichern
         headerTemplateTab.Tag = (mainTemplate, doc);
 
-        // Lade Header-Felder
+        // Lade alle Header-Felder aus HeaderTemplateFields
         headerGrid.Rows.Clear();
 
-        // XML Declaration auslesen
-        string version = "1.0";
-        string encoding = "utf-8";
-        string standalone = "";
-        string rootElement = "";
-
-        if (doc.FirstChild is XmlDeclaration xmlDecl)
+        foreach (var field in HeaderTemplateFields.EssentialFields)
         {
-            version = xmlDecl.Version ?? "1.0";
-            encoding = xmlDecl.Encoding ?? "utf-8";
-            standalone = xmlDecl.Standalone ?? "";
+            var value = doc.DocumentElement.GetTextByPath(field.Path) ?? string.Empty;
+            var rowIndex = headerGrid.Rows.Add(field.Label, value);
+            var row = headerGrid.Rows[rowIndex];
+            row.Tag = field.Path;
         }
 
-        if (doc.DocumentElement != null)
-        {
-            rootElement = doc.DocumentElement.Name;
-        }
-
-        headerGrid.Rows.Add("XML Version", version);
-        headerGrid.Rows.Add("Encoding", encoding);
-        headerGrid.Rows.Add("Standalone", standalone);
-        headerGrid.Rows.Add("Root Element", rootElement);
-
-        // Tag die Reihen mit Header-Informationen
-        if (headerGrid.Rows.Count > 0) headerGrid.Rows[0].Tag = "xml-version";
-        if (headerGrid.Rows.Count > 1) headerGrid.Rows[1].Tag = "xml-encoding";
-        if (headerGrid.Rows.Count > 2) headerGrid.Rows[2].Tag = "xml-standalone";
-        if (headerGrid.Rows.Count > 3) headerGrid.Rows[3].Tag = "root-element";
-
-        if (doc.DocumentElement != null)
-            headerPropertyGrid.SelectedObject = new CourseEditableObject(doc.DocumentElement, onlyFilledFields: true);
+        headerPropertyGrid.SelectedObject = new CourseEditableObject(doc.DocumentElement, onlyFilledFields: true);
     }
 
     private void MainTemplateGrid_CellValueChanged(DataGridViewCellEventArgs e)
@@ -698,39 +681,15 @@ public class MainForm : Form
             return;
 
         var row = headerGrid.Rows[e.RowIndex];
-        if (row.Tag is not string headerField)
+        if (row.Tag is not string fieldPath)
             return;
 
         var newValue = row.Cells[1].Value?.ToString() ?? "";
 
-        // Behandle XML-Declaration-Eigenschaften
-        if (headerField == "xml-version")
+        // Setze den Wert im XML-Dokument
+        if (doc.DocumentElement != null)
         {
-            var xmlDecl = doc.FirstChild as XmlDeclaration ?? doc.CreateXmlDeclaration(newValue, "utf-8", "");
-            if (doc.FirstChild is XmlDeclaration)
-                doc.RemoveChild(doc.FirstChild);
-            doc.InsertBefore(xmlDecl, doc.DocumentElement);
-        }
-        else if (headerField == "xml-encoding")
-        {
-            var xmlDecl = doc.FirstChild as XmlDeclaration;
-            if (xmlDecl == null)
-            {
-                xmlDecl = doc.CreateXmlDeclaration("1.0", newValue, "");
-                doc.InsertBefore(xmlDecl, doc.DocumentElement);
-            }
-            else
-            {
-                xmlDecl.Encoding = newValue;
-            }
-        }
-        else if (headerField == "xml-standalone")
-        {
-            var xmlDecl = doc.FirstChild as XmlDeclaration;
-            if (xmlDecl != null)
-            {
-                xmlDecl.Standalone = newValue;
-            }
+            doc.DocumentElement.SetNodeByPath(fieldPath, newValue);
         }
     }
 
@@ -1009,6 +968,91 @@ public class MainForm : Form
 
         return DateTime.TryParse(clean, out dt);
     }
+
+    // Template Grid CellClick Handler - für Datum-Felder
+    private void MainTemplateGrid_CellClick(object? sender, DataGridViewCellEventArgs e)
+    {
+        if (mainTemplateTab.Tag is not (string path, XmlDocument doc))
+            return;
+
+        if (e.RowIndex < 0 || e.ColumnIndex != 1)
+            return;
+
+        var row = mainTemplateGrid.Rows[e.RowIndex];
+        if (row.Tag is not string fieldPath)
+            return;
+
+        if (!IsDateField(fieldPath))
+            return;
+
+        ShowTemplateDatePicker(row, fieldPath, doc);
+    }
+
+    private void CourseTypeQuickGrid_CellClick(object? sender, DataGridViewCellEventArgs e)
+    {
+        if (courseTypeTemplateTab.Tag is not (string path, XmlDocument doc))
+            return;
+
+        if (e.RowIndex < 0 || e.ColumnIndex != 1)
+            return;
+
+        var row = courseTypeQuickGrid.Rows[e.RowIndex];
+        if (row.Tag is not string fieldPath)
+            return;
+
+        if (!IsDateField(fieldPath))
+            return;
+
+        ShowTemplateDatePicker(row, fieldPath, doc);
+    }
+
+    private void LocationQuickGrid_CellClick(object? sender, DataGridViewCellEventArgs e)
+    {
+        if (locationTemplateTab.Tag is not (string path, XmlDocument doc))
+            return;
+
+        if (e.RowIndex < 0 || e.ColumnIndex != 1)
+            return;
+
+        var row = locationQuickGrid.Rows[e.RowIndex];
+        if (row.Tag is not string fieldPath)
+            return;
+
+        if (!IsDateField(fieldPath))
+            return;
+
+        ShowTemplateDatePicker(row, fieldPath, doc);
+    }
+
+    private void HeaderGrid_CellClick(object? sender, DataGridViewCellEventArgs e)
+    {
+        // Header-Grid hat keine Datum-Felder
+        return;
+    }
+
+    private void ShowTemplateDatePicker(DataGridViewRow row, string path, XmlDocument doc)
+    {
+        bool isCourseDate = path.Contains("SERVICE_DATE", StringComparison.OrdinalIgnoreCase);
+
+        var currentValue = row.Cells[1].Value?.ToString();
+
+        if (!TryParseDate(currentValue, out var initialDate))
+            initialDate = DateTime.Now;
+
+        using var popup = new DateTimePickerPopup(initialDate, includeTime: isCourseDate);
+
+        if (popup.ShowDialog(this) != DialogResult.OK)
+            return;
+
+        string formatted = isCourseDate
+            ? popup.SelectedValue.ToString("yyyy-MM-dd'T'HH:mm:ss.000+01:00")
+            : popup.SelectedValue.ToString("yyyy-MM-dd+01:00");
+
+        row.Cells[1].Value = formatted;
+
+        doc.DocumentElement?.SetNodeByPath(path, formatted);
+    }
+
     private void AddStatusTab(string title, ListBox listBox)
     {
         var tab = new TabPage(title);

@@ -22,7 +22,5 @@ public static class CourseTypeTemplateFields
         ("Instrucion Remarks", "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/EXTENDED_INFO/INSTRUCTION_REMARKS"),
         ("Course Type", "SERVICE_DETAILS/COURSE_TYPE"),
         ("Education Type", "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/EXTENDED_INFO/EDUCATION_TYPE"),
-        ("Start Datum", "SERVICE_DETAILS/SERVICE_DATE/START_DATE"),
-        ("End Datum", "SERVICE_DETAILS/SERVICE_DATE/END_DATE"),
     };
 }

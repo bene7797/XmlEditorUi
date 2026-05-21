@@ -121,7 +121,7 @@ Das Bildungsangebot beinhaltet in Vollzeit 110 und in Teilzeit 180 Tage Praktiku
                                 <URL>https://cdemy.de</URL>
                                 <ADDRESS_REMARKS>Haltestelle Torgauer Platz, Tram-Linien 3, 8.</ADDRESS_REMARKS>
                                 <BARRIER_FREE_LOCATION>false</BARRIER_FREE_LOCATION>
-                            </LOCATION>
+                            <EMAIL>andreas_hoefer@cdemy.de</EMAIL></LOCATION>
                             <DURATION type="7" />
                             <INSTRUCTION_REMARKS>Montag bis Freitag 5,5 Stunden pro Tag in individueller Gleitzeit, aber mit einer Pflicht-Kernzeit von 09:30 Uhr bis 13:30 Uhr.</INSTRUCTION_REMARKS>
                             <FLEXIBLE_START>false</FLEXIBLE_START>

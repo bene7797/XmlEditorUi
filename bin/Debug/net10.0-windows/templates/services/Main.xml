@@ -1,4 +1,77 @@
 <SERVICE mode="new">
+    <HEADER>
+        <GENERATOR_INFO>Export OpenQ 3.52.0</GENERATOR_INFO>
+        <CATALOG>
+            <LANGUAGE>deu</LANGUAGE>
+            <CATALOG_ID>274125-1771521295445</CATALOG_ID>
+            <CATALOG_VERSION>Vers_KURSNET</CATALOG_VERSION>
+            <CATALOG_NAME>KURSNET-Export</CATALOG_NAME>
+            <GENERATION_DATE>2026-02-19T18:14:55.445+01:00</GENERATION_DATE>
+        </CATALOG>
+        <DOCUMENT_CREATOR>
+            <FIRST_NAME>Exporter</FIRST_NAME>
+            <LAST_NAME>openQ-CAT</LAST_NAME>
+            <PHONE>+49.911.179</PHONE>
+            <ID_DB>nr:5446</ID_DB>
+            <ADDRESS>
+                <NAME>IT-Systemhaus</NAME>
+                <STREET>Regensburgerstr. 104</STREET>
+                <ZIP>90478</ZIP>
+                <CITY>Nürnberg</CITY>
+                <COUNTRY>DE</COUNTRY>
+                <URL>http://www.kursnet-online.arbeitsagentur.de</URL>
+                <ID_DB>adr:115</ID_DB>
+            </ADDRESS>
+            <CONTACT_REMARKS>Eugen Riske</CONTACT_REMARKS>
+        </DOCUMENT_CREATOR>
+        <RECIPIENT>
+            <RECIPIENT_ID>BA</RECIPIENT_ID>
+            <RECIPIENT_NAME>Informationssystem KURSNET</RECIPIENT_NAME>
+            <ADDRESS>
+                <NAME>IT-Systemhaus</NAME>
+                <STREET>Regensburgerstr. 104</STREET>
+                <ZIP>90478</ZIP>
+                <CITY>Nürnberg</CITY>
+                <COUNTRY>DE</COUNTRY>
+                <URL>http://www.kursnet-online.arbeitsagentur.de</URL>
+            </ADDRESS>
+        </RECIPIENT>
+        <SUPPLIER>
+            <SUPPLIER_ID type="supplier_specific">274125</SUPPLIER_ID>
+            <SUPPLIER_NAME>cdemy GmbH Code Academy </SUPPLIER_NAME>
+            <ADDRESS>
+                <NAME>cdemy GmbH</NAME>
+                <NAME2>Code Academy</NAME2>
+                <STREET>Richard-Roosen-Straße 9</STREET>
+                <ZIP>34123</ZIP>
+                <CITY>Kassel</CITY>
+                <STATE>Hessen</STATE>
+                <COUNTRY>deutschland</COUNTRY>
+                <PHONE>+49.561.85014038</PHONE>
+                <MOBILE>+49.1578.6897671</MOBILE>
+                <FAX />
+                <EMAILS>
+                    <EMAIL>info@cdemy.de</EMAIL>
+                </EMAILS>
+                <URL>https://cdemy.de</URL>
+            </ADDRESS>
+            <CONTACT>
+                <CONTACT_ROLE type="5">Sonstige</CONTACT_ROLE>
+                <SALUTATION>m</SALUTATION>
+                <FIRST_NAME>Andreas</FIRST_NAME>
+                <LAST_NAME>Höfer</LAST_NAME>
+                <PHONE>+49.561.98808660</PHONE>
+                <MOBILE>+49.1578.6897671</MOBILE>
+                <FAX />
+                <EMAILS>
+                    <EMAIL>andreas_hoefer@cdemy.de</EMAIL>
+                </EMAILS>
+                <URL>https://cdemy.de</URL>
+                <ID_DB>1148177</ID_DB>
+                <CONTACT_REMARKS>Leiter Unternehmensentwicklung</CONTACT_REMARKS>
+            </CONTACT>
+        </SUPPLIER>
+    </HEADER>
     <PRODUCT_ID>375057134</PRODUCT_ID>
     <COURSE_TYPE>1</COURSE_TYPE>
     <SUPPLIER_ID_REF type="supplier_specific">274125</SUPPLIER_ID_REF>
