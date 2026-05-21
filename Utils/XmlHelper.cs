@@ -8,9 +8,21 @@ public static class XmlHelper
 {
     public static XmlNode? GetNodeByPath(this XmlNode startNode, string path)
     {
+        // Behandle Attribut-Selektor
+        if (path.Contains("@"))
+        {
+            var parts = path.Split('@');
+            var elementPath = parts[0].TrimEnd('/');
+
+            if (string.IsNullOrEmpty(elementPath))
+                return startNode;
+
+            return startNode.GetNodeByPath(elementPath);
+        }
+
         var current = startNode;
 
-        foreach (var part in path.Split('/'))
+        foreach (var part in path.Split('/').Where(p => !string.IsNullOrEmpty(p)))
         {
             current = current.ChildNodes
                 .Cast<XmlNode>()
@@ -25,6 +37,20 @@ public static class XmlHelper
 
     public static string? GetTextByPath(this XmlNode startNode, string path)
     {
+        // Behandle Attribut-Selektor
+        if (path.Contains("@"))
+        {
+            var parts = path.Split('@');
+            var elementPath = parts[0].TrimEnd('/');
+            var attributeName = parts[1];
+
+            var element = startNode.GetNodeByPath(elementPath);
+            if (element?.Attributes?[attributeName] != null)
+                return element.Attributes[attributeName].Value;
+
+            return null;
+        }
+
         return startNode.GetNodeByPath(path)?.InnerText?.Trim();
     }
 
@@ -36,7 +62,39 @@ public static class XmlHelper
         if (document == null)
             throw new InvalidOperationException("Kein XmlDocument verfügbar.");
 
-        foreach (var part in path.Split('/'))
+        // Behandle Attribut-Selektor
+        if (path.Contains("@"))
+        {
+            var parts = path.Split('@');
+            var elementPath = parts[0].TrimEnd('/');
+            var attributeName = parts[1];
+
+            // Navigiere zum Element
+            if (!string.IsNullOrEmpty(elementPath))
+            {
+                foreach (var part in elementPath.Split('/').Where(p => !string.IsNullOrEmpty(p)))
+                {
+                    var next = current.ChildNodes
+                        .Cast<XmlNode>()
+                        .FirstOrDefault(n => n.LocalName.Equals(part, StringComparison.OrdinalIgnoreCase));
+
+                    if (next == null)
+                    {
+                        next = document.CreateElement(part);
+                        current.AppendChild(next);
+                    }
+
+                    current = next;
+                }
+            }
+
+            // Setze das Attribut
+            current.SetAttribute(attributeName, value);
+            return current;
+        }
+
+        // Normaler Element-Pfad
+        foreach (var part in path.Split('/').Where(p => !string.IsNullOrEmpty(p)))
         {
             var next = current.ChildNodes
                 .Cast<XmlNode>()

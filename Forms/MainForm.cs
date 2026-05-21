@@ -31,6 +31,7 @@ public class MainForm : Form
     private readonly TabPage mainTemplateTab = new("Main Template");
     private readonly TabPage courseTypeTemplateTab = new("Beschäftigungsart");
     private readonly TabPage locationTemplateTab = new("Ort");
+    private readonly TabPage headerTemplateTab = new("Header");
 
     // Main Template Tab
     private readonly DataGridView mainTemplateGrid = new();
@@ -48,6 +49,11 @@ public class MainForm : Form
     private readonly DataGridView locationQuickGrid = new();
     private readonly PropertyGrid locationPropertyGrid = new();
     private readonly Button saveLocationButton = new();
+
+    // Header Tab
+    private readonly DataGridView headerGrid = new();
+    private readonly PropertyGrid headerPropertyGrid = new();
+    private readonly Button saveHeaderTemplateButton = new();
 
     // Alte Elemente (deprecated aber noch vorhanden für Kompatibilität)
     private readonly TreeView templateTree = new();
@@ -238,14 +244,15 @@ public class MainForm : Form
 
     private void BuildTemplateEditorTab()
     {
-        // Erstelle Sub-TabControl für die drei Template-Typen
+        // Erstelle Sub-TabControl für die vier Template-Typen
         templateSubTabs.Dock = DockStyle.Fill;
         templateSubTabs.Alignment = TabAlignment.Top;
 
-        // Initialisiere die drei Tabs
+        // Initialisiere die vier Tabs
         templateSubTabs.TabPages.Add(mainTemplateTab);
         templateSubTabs.TabPages.Add(courseTypeTemplateTab);
         templateSubTabs.TabPages.Add(locationTemplateTab);
+        templateSubTabs.TabPages.Add(headerTemplateTab);
 
         // Main Template Tab
         BuildMainTemplateTab();
@@ -255,6 +262,9 @@ public class MainForm : Form
 
         // Ort Tab
         BuildLocationTemplateTab();
+
+        // Header Tab
+        BuildHeaderTemplateTab();
 
         templateEditorTab.Controls.Add(templateSubTabs);
     }
@@ -378,6 +388,39 @@ public class MainForm : Form
         locationTemplateTab.Controls.Add(locationPropertyGrid);
     }
 
+    private void BuildHeaderTemplateTab()
+    {
+        saveHeaderTemplateButton.Text = "Header speichern";
+        saveHeaderTemplateButton.Left = 10;
+        saveHeaderTemplateButton.Top = 10;
+        saveHeaderTemplateButton.Width = 150;
+        saveHeaderTemplateButton.Click += SaveHeaderTemplate;
+
+        headerGrid.Left = 10;
+        headerGrid.Top = 50;
+        headerGrid.Width = 1160;
+        headerGrid.Height = 240;
+        headerGrid.AllowUserToAddRows = false;
+        headerGrid.AllowUserToDeleteRows = false;
+        headerGrid.RowHeadersVisible = false;
+        headerGrid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+        headerGrid.Columns.Add("Field", "Feld");
+        headerGrid.Columns.Add("Value", "Wert");
+        headerGrid.Columns["Field"]!.ReadOnly = true;
+        headerGrid.CellValueChanged += (s, e) => HeaderGrid_CellValueChanged(e);
+
+        headerPropertyGrid.Left = 10;
+        headerPropertyGrid.Top = 300;
+        headerPropertyGrid.Width = 1160;
+        headerPropertyGrid.Height = 330;
+        headerPropertyGrid.ToolbarVisible = false;
+        headerPropertyGrid.HelpVisible = false;
+
+        headerTemplateTab.Controls.Add(saveHeaderTemplateButton);
+        headerTemplateTab.Controls.Add(headerGrid);
+        headerTemplateTab.Controls.Add(headerPropertyGrid);
+    }
+
     private void LoadTemplateProfilesAndTree()
     {
         if (profileManager == null || courseTypeTemplateManager == null || locationTemplateManager == null)
@@ -388,6 +431,9 @@ public class MainForm : Form
 
         // Lade Main Template
         LoadMainTemplate();
+
+        // Lade Header
+        LoadHeaderTemplate();
 
         // Lade Beschäftigungsart-Vorlagen
         var courseTypes = courseTypeTemplateManager.GetAvailableCourseTypeNames();
@@ -524,6 +570,64 @@ public class MainForm : Form
         locationPropertyGrid.SelectedObject = new CourseEditableObject(service, onlyFilledFields: true);
     }
 
+    private void LoadHeaderTemplate()
+    {
+        var templates = templateRepository.GetTemplateFiles();
+        var mainTemplate = templates.FirstOrDefault(t =>
+            Path.GetFileName(t).Equals("Main.xml", StringComparison.OrdinalIgnoreCase));
+
+        if (mainTemplate == null)
+        {
+            MessageBox.Show("Main.xml nicht gefunden");
+            return;
+        }
+
+        var doc = new XmlDocument();
+        doc.PreserveWhitespace = true;
+        doc.Load(mainTemplate);
+
+        if (doc == null)
+            return;
+
+        // Speichere für Speichern
+        headerTemplateTab.Tag = (mainTemplate, doc);
+
+        // Lade Header-Felder
+        headerGrid.Rows.Clear();
+
+        // XML Declaration auslesen
+        string version = "1.0";
+        string encoding = "utf-8";
+        string standalone = "";
+        string rootElement = "";
+
+        if (doc.FirstChild is XmlDeclaration xmlDecl)
+        {
+            version = xmlDecl.Version ?? "1.0";
+            encoding = xmlDecl.Encoding ?? "utf-8";
+            standalone = xmlDecl.Standalone ?? "";
+        }
+
+        if (doc.DocumentElement != null)
+        {
+            rootElement = doc.DocumentElement.Name;
+        }
+
+        headerGrid.Rows.Add("XML Version", version);
+        headerGrid.Rows.Add("Encoding", encoding);
+        headerGrid.Rows.Add("Standalone", standalone);
+        headerGrid.Rows.Add("Root Element", rootElement);
+
+        // Tag die Reihen mit Header-Informationen
+        if (headerGrid.Rows.Count > 0) headerGrid.Rows[0].Tag = "xml-version";
+        if (headerGrid.Rows.Count > 1) headerGrid.Rows[1].Tag = "xml-encoding";
+        if (headerGrid.Rows.Count > 2) headerGrid.Rows[2].Tag = "xml-standalone";
+        if (headerGrid.Rows.Count > 3) headerGrid.Rows[3].Tag = "root-element";
+
+        if (doc.DocumentElement != null)
+            headerPropertyGrid.SelectedObject = new CourseEditableObject(doc.DocumentElement, onlyFilledFields: true);
+    }
+
     private void MainTemplateGrid_CellValueChanged(DataGridViewCellEventArgs e)
     {
         if (e.RowIndex < 0 || e.ColumnIndex != 1)
@@ -585,6 +689,51 @@ public class MainForm : Form
         doc.DocumentElement?.SetNodeByPath(fieldPath, newValue);
     }
 
+    private void HeaderGrid_CellValueChanged(DataGridViewCellEventArgs e)
+    {
+        if (e.RowIndex < 0 || e.ColumnIndex != 1)
+            return;
+
+        if (headerTemplateTab.Tag is not (string path, XmlDocument doc))
+            return;
+
+        var row = headerGrid.Rows[e.RowIndex];
+        if (row.Tag is not string headerField)
+            return;
+
+        var newValue = row.Cells[1].Value?.ToString() ?? "";
+
+        // Behandle XML-Declaration-Eigenschaften
+        if (headerField == "xml-version")
+        {
+            var xmlDecl = doc.FirstChild as XmlDeclaration ?? doc.CreateXmlDeclaration(newValue, "utf-8", "");
+            if (doc.FirstChild is XmlDeclaration)
+                doc.RemoveChild(doc.FirstChild);
+            doc.InsertBefore(xmlDecl, doc.DocumentElement);
+        }
+        else if (headerField == "xml-encoding")
+        {
+            var xmlDecl = doc.FirstChild as XmlDeclaration;
+            if (xmlDecl == null)
+            {
+                xmlDecl = doc.CreateXmlDeclaration("1.0", newValue, "");
+                doc.InsertBefore(xmlDecl, doc.DocumentElement);
+            }
+            else
+            {
+                xmlDecl.Encoding = newValue;
+            }
+        }
+        else if (headerField == "xml-standalone")
+        {
+            var xmlDecl = doc.FirstChild as XmlDeclaration;
+            if (xmlDecl != null)
+            {
+                xmlDecl.Standalone = newValue;
+            }
+        }
+    }
+
     private void SaveMainTemplate(object? sender, EventArgs e)
     {
         if (mainTemplateTab.Tag is not (string path, XmlDocument doc))
@@ -638,6 +787,26 @@ public class MainForm : Form
             doc.Save(path);
             MessageBox.Show("Template gespeichert");
             LoadLocationTemplate();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Fehler beim Speichern: {ex.Message}");
+        }
+    }
+
+    private void SaveHeaderTemplate(object? sender, EventArgs e)
+    {
+        if (headerTemplateTab.Tag is not (string path, XmlDocument doc))
+        {
+            MessageBox.Show("Kein Template geladen");
+            return;
+        }
+
+        try
+        {
+            doc.Save(path);
+            MessageBox.Show("Header gespeichert");
+            LoadHeaderTemplate();
         }
         catch (Exception ex)
         {
