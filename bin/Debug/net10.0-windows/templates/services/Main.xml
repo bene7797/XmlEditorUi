@@ -1,5 +1,5 @@
 <SERVICE mode="new">
-    <PRODUCT_ID>0</PRODUCT_ID>
+    <PRODUCT_ID>375057134</PRODUCT_ID>
     <COURSE_TYPE>1</COURSE_TYPE>
     <SUPPLIER_ID_REF type="supplier_specific">274125</SUPPLIER_ID_REF>
     <SERVICE_DETAILS>
@@ -106,20 +106,20 @@ Das Bildungsangebot beinhaltet in Vollzeit 110 und in Teilzeit 180 Tage Praktiku
                     <LOCATION>
                         <NAME>cdemy GmbH</NAME>
                         <NAME2>Code Academy</NAME2>
-                        <STREET></STREET>
-                        <ZIP></ZIP>
-                        <ZIPBOX></ZIPBOX>
-                        <CITY></CITY>
-                        <STATE></STATE>
+                        <STREET>Eisenbahnstraße 121</STREET>
+                        <ZIP>04315</ZIP>
+                        <ZIPBOX>04315</ZIPBOX>
+                        <CITY>Leipzig</CITY>
+                        <STATE>Sachsen</STATE>
                         <COUNTRY>deutschland</COUNTRY>
-                        <PHONE></PHONE>
-                        <MOBILE></MOBILE>
-                        <FAX />
+                        <PHONE>+49.341.99990117</PHONE>
+                        <MOBILE>+49.157.86967671</MOBILE>
+                        <FAX></FAX>
                         <EMAILS>
                             <EMAIL>info@cdemy.de</EMAIL>
                         </EMAILS>
                         <URL>https://cdemy.de</URL>
-                        <ADDRESS_REMARKS></ADDRESS_REMARKS>
+                        <ADDRESS_REMARKS>Haltestelle Torgauer Platz, Tram-Linien 3, 8.</ADDRESS_REMARKS>
                         <BARRIER_FREE_LOCATION>false</BARRIER_FREE_LOCATION>
                     </LOCATION>
                     <DURATION type="7" />
