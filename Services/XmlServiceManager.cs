@@ -355,6 +355,7 @@ public class XmlServiceManager
         var root = exportDoc.CreateElement("OPENQCAT");
         root.SetAttribute("version", "1.1");
         root.SetAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
+        root.SetAttribute("noNamespaceSchemaLocation", "http://www.w3.org/2001/XMLSchema-instance", "openQ-cat.V1.1.xsd");
 
         exportDoc.AppendChild(root);
 
@@ -391,7 +392,7 @@ public class XmlServiceManager
         var root = exportDoc.CreateElement("OPENQCAT");
         root.SetAttribute("version", "1.1");
         root.SetAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
-        root.SetAttribute("xsi:noNamespaceSchemaLocation", "openQ-cat.V1.1.xsd");
+        root.SetAttribute("noNamespaceSchemaLocation", "http://www.w3.org/2001/XMLSchema-instance", "openQ-cat.V1.1.xsd");
         exportDoc.AppendChild(root);
 
         // Add header template if available
