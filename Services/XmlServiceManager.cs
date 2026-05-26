@@ -243,7 +243,7 @@ public class XmlServiceManager
 
         // Validate against the export document structure (same as what will be exported)
         var exportDoc = BuildExportDocument();
-        
+
         var schemas = new XmlSchemaSet();
         schemas.Add(null, schemaPath);
 
