@@ -15,6 +15,7 @@ public class XmlServiceManager
     private readonly Dictionary<XmlNode, HashSet<string>> pendingTemplateFields = new();
     private readonly Dictionary<XmlNode, HashSet<string>> changedImportantFields = new();
     private XmlDocument? document;
+    private XmlNode? headerTemplate;
 
     public XmlServiceManager(string servicesTemplateFolder, List<QuickFieldDefinition> importantFields)
     {
@@ -28,6 +29,11 @@ public class XmlServiceManager
     public IReadOnlyCollection<DeletedServiceInfo> DeletedServices => deletedServices;
     public IReadOnlyDictionary<XmlNode, HashSet<string>> PendingTemplateFields => pendingTemplateFields;
     public IReadOnlyDictionary<XmlNode, HashSet<string>> ChangedImportantFields => changedImportantFields;
+
+    public void SetHeaderTemplate(XmlNode? header)
+    {
+        headerTemplate = header;
+    }
 
     public void LoadXml(string path)
     {
@@ -235,11 +241,14 @@ public class XmlServiceManager
     {
         EnsureDocumentLoaded();
 
+        // Validate against the export document structure (same as what will be exported)
+        var exportDoc = BuildExportDocument();
+        
         var schemas = new XmlSchemaSet();
         schemas.Add(null, schemaPath);
 
-        document!.Schemas = schemas;
-        document.Validate((_, args) => throw new XmlSchemaValidationException(args.Message));
+        exportDoc.Schemas = schemas;
+        exportDoc.Validate((_, args) => throw new XmlSchemaValidationException(args.Message));
     }
 
     public IEnumerable<XmlNode> GetActiveServices()
@@ -340,20 +349,34 @@ public class XmlServiceManager
     private XmlDocument BuildNewCatalogExport()
     {
         var exportDoc = new XmlDocument();
-        var declaration = exportDoc.CreateXmlDeclaration("1.0", "utf-8", null);
+        var declaration = exportDoc.CreateXmlDeclaration("1.0", "iso-8859-15", "yes");
         exportDoc.AppendChild(declaration);
 
-        var root = exportDoc.CreateElement("NEW_CATALOG");
-        root.SetAttribute("FULLCATALOG", "true");
+        var root = exportDoc.CreateElement("OPENQCAT");
+        root.SetAttribute("version", "1.1");
+        root.SetAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
+
         exportDoc.AppendChild(root);
+
+        // Add header template if available
+        if (headerTemplate != null)
+        {
+            var importedHeader = exportDoc.ImportNode(headerTemplate, deep: true);
+            root.AppendChild(importedHeader);
+        }
+
+        var catalog = exportDoc.CreateElement("NEW_CATALOG");
+        catalog.SetAttribute("FULLCATALOG", "true");
+        root.AppendChild(catalog);
 
         var services = GetActiveServices();
 
         foreach (var service in services)
         {
             var imported = exportDoc.ImportNode(service, deep: true);
+            RemoveHeaderFromService(imported);
             SetAttributeForDocument(exportDoc, imported, "mode", "new");
-            root.AppendChild(imported);
+            catalog.AppendChild(imported);
         }
 
         return exportDoc;
@@ -362,15 +385,28 @@ public class XmlServiceManager
     private XmlDocument BuildUpdateCatalogExport()
     {
         var exportDoc = new XmlDocument();
-        var declaration = exportDoc.CreateXmlDeclaration("1.0", "utf-8", null);
+        var declaration = exportDoc.CreateXmlDeclaration("1.0", "iso-8859-15", "yes");
         exportDoc.AppendChild(declaration);
 
-        var root = exportDoc.CreateElement("UPDATE_CATALOG");
-        root.SetAttribute("seq_number", "1");
+        var root = exportDoc.CreateElement("OPENQCAT");
+        root.SetAttribute("version", "1.1");
+        root.SetAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
+        root.SetAttribute("xsi:noNamespaceSchemaLocation", "openQ-cat.V1.1.xsd");
         exportDoc.AppendChild(root);
 
+        // Add header template if available
+        if (headerTemplate != null)
+        {
+            var importedHeader = exportDoc.ImportNode(headerTemplate, deep: true);
+            root.AppendChild(importedHeader);
+        }
+
+        var catalog = exportDoc.CreateElement("UPDATE_CATALOG");
+        catalog.SetAttribute("seq_number", "1");
+        root.AppendChild(catalog);
+
         var deleteNode = exportDoc.CreateElement("DELETE");
-        root.AppendChild(deleteNode);
+        catalog.AppendChild(deleteNode);
 
         foreach (var deleted in deletedServices)
         {
@@ -382,7 +418,7 @@ public class XmlServiceManager
         }
 
         var newNode = exportDoc.CreateElement("NEW");
-        root.AppendChild(newNode);
+        catalog.AppendChild(newNode);
 
         var servicesToExport = GetActiveServices()
             .Where(service =>
@@ -393,6 +429,7 @@ public class XmlServiceManager
         foreach (var service in servicesToExport)
         {
             var imported = exportDoc.ImportNode(service, deep: true);
+            RemoveHeaderFromService(imported);
             SetAttributeForDocument(exportDoc, imported, "mode", "new");
             newNode.AppendChild(imported);
         }
@@ -411,6 +448,19 @@ public class XmlServiceManager
         }
 
         attr.Value = value;
+    }
+
+    private static void RemoveHeaderFromService(XmlNode service)
+    {
+        var headerNodes = service.ChildNodes
+            .Cast<XmlNode>()
+            .Where(n => n.LocalName.Equals("HEADER", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        foreach (var header in headerNodes)
+        {
+            service.RemoveChild(header);
+        }
     }
 
     private void EnsureDocumentLoaded()

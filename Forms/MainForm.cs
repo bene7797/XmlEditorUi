@@ -1502,6 +1502,22 @@ public class MainForm : Form
 
         try
         {
+            // Load and set header template
+            var templates = templateRepository.GetTemplateFiles();
+            var mainTemplate = templates.FirstOrDefault(t =>
+                Path.GetFileName(t).Equals("Main.xml", StringComparison.OrdinalIgnoreCase));
+
+            if (mainTemplate != null)
+            {
+                var headerDoc = templateRepository.LoadTemplateDocument(mainTemplate);
+                var headerElement = headerDoc.DocumentElement;
+                if (headerElement != null)
+                {
+                    var headerNode = headerElement.SelectSingleNode("HEADER");
+                    serviceManager.SetHeaderTemplate(headerNode);
+                }
+            }
+
             var exportDoc = BuildExportDocument();
             exportDoc.Save(dialog.FileName);
 
