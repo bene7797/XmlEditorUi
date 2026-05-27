@@ -1531,26 +1531,30 @@ public class MainForm : Form
 
     private void ValidateXml(object? sender, EventArgs e)
     {
-        if (serviceManager.Document == null)
-        {
-            MessageBox.Show("Bitte zuerst XML öffnen.");
-            return;
-        }
-
         using var dialog = new OpenFileDialog();
-        dialog.Filter = "XSD Dateien (*.xsd)|*.xsd|Alle Dateien (*.*)|*.*";
+        dialog.Filter = "XML Dateien (*.xml)|*.xml|Alle Dateien (*.*)|*.*";
 
         if (dialog.ShowDialog() != DialogResult.OK)
             return;
 
         try
         {
-            serviceManager.ValidateWithSchema(dialog.FileName);
-            MessageBox.Show("XML ist gültig laut XSD.");
+            string xmlPath = dialog.FileName;
+
+            // Fest eingebauter XSD-Pfad
+            string xsdPath = Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory,
+                "schema.xsd"
+            );
+
+            serviceManager.LoadXml(xmlPath);
+            serviceManager.ValidateWithSchema(xsdPath);
+
+            MessageBox.Show("XML ist gültig laut eingebautem XSD.");
         }
         catch (Exception ex)
         {
-            MessageBox.Show("XSD-Fehler:\n" + ex.Message);
+            MessageBox.Show("Validierungsfehler:\n" + ex.Message);
         }
     }
 }
