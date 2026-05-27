@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml;
+using System.Xml.Linq;
 using System.Xml.Schema;
 
 namespace XmlEditorUi;
@@ -237,18 +238,23 @@ public class XmlServiceManager
             : BuildNewCatalogExport();
     }
 
-    public void ValidateWithSchema(string schemaPath)
+    public void ValidateWithSchema(string xmlPath, string schemaPath)
     {
-        EnsureDocumentLoaded();
+        if (!File.Exists(xmlPath))
+            throw new FileNotFoundException("XML-Datei wurde nicht gefunden.", xmlPath);
 
-        // Validate against the export document structure (same as what will be exported)
-        var exportDoc = BuildExportDocument();
+        if (!File.Exists(schemaPath))
+            throw new FileNotFoundException("XSD-Datei wurde nicht gefunden.", schemaPath);
+
+        var xmlDoc = XDocument.Load(xmlPath);
 
         var schemas = new XmlSchemaSet();
         schemas.Add(null, schemaPath);
 
-        exportDoc.Schemas = schemas;
-        exportDoc.Validate((_, args) => throw new XmlSchemaValidationException(args.Message));
+        xmlDoc.Validate(schemas, (_, args) =>
+        {
+            throw new XmlSchemaValidationException(args.Message);
+        });
     }
 
     public IEnumerable<XmlNode> GetActiveServices()

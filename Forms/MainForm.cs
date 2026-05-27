@@ -1541,14 +1541,12 @@ public class MainForm : Form
         {
             string xmlPath = dialog.FileName;
 
-            // Fest eingebauter XSD-Pfad
             string xsdPath = Path.Combine(
                 AppDomain.CurrentDomain.BaseDirectory,
                 "schema.xsd"
             );
 
-            serviceManager.LoadXml(xmlPath);
-            serviceManager.ValidateWithSchema(xsdPath);
+            serviceManager.ValidateWithSchema(xmlPath, xsdPath);
 
             MessageBox.Show("XML ist gültig laut eingebautem XSD.");
         }
