@@ -1502,19 +1502,21 @@ public class MainForm : Form
 
         try
         {
-            // Load and set header template
-            var templates = templateRepository.GetTemplateFiles();
-            var mainTemplate = templates.FirstOrDefault(t =>
-                Path.GetFileName(t).Equals("Main.xml", StringComparison.OrdinalIgnoreCase));
-
-            if (mainTemplate != null)
+            if (serviceManager.GetHeaderTemplate() == null)
             {
-                var headerDoc = templateRepository.LoadTemplateDocument(mainTemplate);
-                var headerElement = headerDoc.DocumentElement;
-                if (headerElement != null)
+                var templates = templateRepository.GetTemplateFiles();
+                var mainTemplate = templates.FirstOrDefault(t =>
+                    Path.GetFileName(t).Equals("Main.xml", StringComparison.OrdinalIgnoreCase));
+
+                if (mainTemplate != null)
                 {
-                    var headerNode = headerElement.SelectSingleNode("HEADER");
-                    serviceManager.SetHeaderTemplate(headerNode);
+                    var headerDoc = templateRepository.LoadTemplateDocument(mainTemplate);
+                    var headerElement = headerDoc.DocumentElement;
+                    if (headerElement != null)
+                    {
+                        var headerNode = headerElement.SelectSingleNode("HEADER");
+                        serviceManager.SetHeaderTemplate(headerNode);
+                    }
                 }
             }
 

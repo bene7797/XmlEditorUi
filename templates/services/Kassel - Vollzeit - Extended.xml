@@ -1,5 +1,5 @@
 <SERVICE mode="new">
-            <PRODUCT_ID>375057142</PRODUCT_ID>
+            <PRODUCT_ID>375057140</PRODUCT_ID>
             <COURSE_TYPE>1</COURSE_TYPE>
             <SUPPLIER_ID_REF type="supplier_specific">274125</SUPPLIER_ID_REF>
             <SERVICE_DETAILS>
@@ -89,7 +89,7 @@ Das Bildungsangebot beinhaltet in Vollzeit 110 und in Teilzeit 180 Tage Praktiku
                         <EXTENDED_INFO>
                             <INSTITUTION type="102">Berufsbildende Schule/Einrichtung</INSTITUTION>
                             <INSTRUCTION_FORM type="101">Präsenzunterricht</INSTRUCTION_FORM>
-                            <INSTRUCTION_TIME type="1">Teilzeit</INSTRUCTION_TIME>
+                            <INSTRUCTION_TIME type="1">Vollzeit</INSTRUCTION_TIME>
                             <FUNDING_TYPES_FEDERAL type="2">Bildungsgutschein</FUNDING_TYPES_FEDERAL>
                             <FUNDING_TYPES_FEDERAL type="5">Weiterbildungsstipendium bei der Stiftung Begabtenförderung berufliche Bildung (SBB)</FUNDING_TYPES_FEDERAL>
                             <FUNDING_TYPES_FEDERAL type="12">Arbeitslosengeld bei beruflicher Weiterbildung</FUNDING_TYPES_FEDERAL>
@@ -106,11 +106,11 @@ Das Bildungsangebot beinhaltet in Vollzeit 110 und in Teilzeit 180 Tage Praktiku
                             <LOCATION>
                                 <NAME>cdemy GmbH</NAME>
                                 <NAME2>Code Academy</NAME2>
-                                <STREET>Eisenbahnstraße 121</STREET>
-                                <ZIP>04315</ZIP>
-                                <ZIPBOX>04315</ZIPBOX>
-                                <CITY>Leipzig</CITY>
-                                <STATE>Sachsen</STATE>
+                                <STREET>Richard-Roosen-Straße 9</STREET>
+                                <ZIP>34123</ZIP>
+                                <ZIPBOX>34123</ZIPBOX>
+                                <CITY>Kassel</CITY>
+                                <STATE>Hessen</STATE>
                                 <COUNTRY>deutschland</COUNTRY>
                                 <PHONE>+49.341.99990117</PHONE>
                                 <MOBILE>+49.157.86967671</MOBILE>
@@ -119,11 +119,11 @@ Das Bildungsangebot beinhaltet in Vollzeit 110 und in Teilzeit 180 Tage Praktiku
                                     <EMAIL>info@cdemy.de</EMAIL>
                                 </EMAILS>
                                 <URL>https://cdemy.de</URL>
-                                <ADDRESS_REMARKS>Haltestelle Torgauer Platz, Tram-Linien 3, 8.</ADDRESS_REMARKS>
+                                <ADDRESS_REMARKS>Gut erreichbar im Industriepark Waldau. Mehrere Autobahnanschlüsse. Mehrere ÖPNV-Haltestellen in fußläufiger Entfernung.</ADDRESS_REMARKS>
                                 <BARRIER_FREE_LOCATION>false</BARRIER_FREE_LOCATION>
                             </LOCATION>
-                            <DURATION type="8" />
-                            <INSTRUCTION_REMARKS>Montag bis Freitag 5,5 Stunden pro Tag in individueller Gleitzeit, aber mit einer Pflicht-Kernzeit von 09:30 Uhr bis 13:30 Uhr.</INSTRUCTION_REMARKS>
+                            <DURATION type="7" />
+                            <INSTRUCTION_REMARKS>Montag bis Freitag 8,5 Stunden (inkl. Mittagspause) pro Tag in individueller Gleitzeit, aber mit einer Pflicht-Kernzeit von 09:30 Uhr bis 16:30 Uhr.</INSTRUCTION_REMARKS>
                             <FLEXIBLE_START>false</FLEXIBLE_START>
                             <EXTENDED_INFO>
                                 <SEGMENT_TYPE type="0" />

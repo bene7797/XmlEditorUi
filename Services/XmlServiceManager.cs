@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.Schema;
@@ -9,6 +10,19 @@ namespace XmlEditorUi;
 
 public class XmlServiceManager
 {
+    private static readonly string[] InvalidEducationExtendedInfoElements =
+    {
+        "DURATION",
+        "INSTRUCTION_REMARKS"
+    };
+
+    private static readonly string[] AddressElementOrder =
+    {
+        "NAME", "NAME2", "NAME3", "STREET", "ZIP", "BOXNO", "ZIPBOX", "CITY", "DISTRICT", "STATE",
+        "COUNTRY_CODED", "COUNTRY", "PHONE", "MOBILE", "FAX", "EMAILS", "URL", "ADDRESS_REMARKS",
+        "BARRIER_FREE_LOCATION", "ID_DB"
+    };
+
     private readonly string servicesTemplateFolder;
     private readonly List<QuickFieldDefinition> importantFields;
     private readonly Dictionary<XmlNode, ServiceState> serviceStates = new();
@@ -17,6 +31,11 @@ public class XmlServiceManager
     private readonly Dictionary<XmlNode, HashSet<string>> changedImportantFields = new();
     private XmlDocument? document;
     private XmlNode? headerTemplate;
+
+    static XmlServiceManager()
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+    }
 
     public XmlServiceManager(string servicesTemplateFolder, List<QuickFieldDefinition> importantFields)
     {
@@ -36,6 +55,8 @@ public class XmlServiceManager
         headerTemplate = header;
     }
 
+    public XmlNode? GetHeaderTemplate() => headerTemplate;
+
     public void LoadXml(string path)
     {
         document = new XmlDocument();
@@ -46,6 +67,8 @@ public class XmlServiceManager
         deletedServices.Clear();
         pendingTemplateFields.Clear();
         changedImportantFields.Clear();
+
+        CaptureHeaderFromDocument();
     }
 
     public IEnumerable<XmlNode> GetServiceNodes()
@@ -373,7 +396,7 @@ public class XmlServiceManager
         }
 
         var catalog = exportDoc.CreateElement("NEW_CATALOG");
-        catalog.SetAttribute("FULLCATALOG", "true");
+        catalog.SetAttribute("FULLCATALOG", "1");
         root.AppendChild(catalog);
 
         var services = GetActiveServices();
@@ -381,7 +404,7 @@ public class XmlServiceManager
         foreach (var service in services)
         {
             var imported = exportDoc.ImportNode(service, deep: true);
-            RemoveHeaderFromService(imported);
+            SanitizeServiceForExport(imported);
             SetAttributeForDocument(exportDoc, imported, "mode", "new");
             catalog.AppendChild(imported);
         }
@@ -436,7 +459,7 @@ public class XmlServiceManager
         foreach (var service in servicesToExport)
         {
             var imported = exportDoc.ImportNode(service, deep: true);
-            RemoveHeaderFromService(imported);
+            SanitizeServiceForExport(imported);
             SetAttributeForDocument(exportDoc, imported, "mode", "new");
             newNode.AppendChild(imported);
         }
@@ -457,6 +480,29 @@ public class XmlServiceManager
         attr.Value = value;
     }
 
+    private void CaptureHeaderFromDocument()
+    {
+        if (document?.DocumentElement == null)
+            return;
+
+        if (!document.DocumentElement.LocalName.Equals("OPENQCAT", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var header = document.DocumentElement.ChildNodes
+            .Cast<XmlNode>()
+            .FirstOrDefault(n => n.LocalName.Equals("HEADER", StringComparison.OrdinalIgnoreCase));
+
+        if (header != null)
+            headerTemplate = header;
+    }
+
+    private static void SanitizeServiceForExport(XmlNode service)
+    {
+        RemoveHeaderFromService(service);
+        RemoveInvalidEducationExtendedInfoElements(service);
+        NormalizeLocationEmailElements(service);
+    }
+
     private static void RemoveHeaderFromService(XmlNode service)
     {
         var headerNodes = service.ChildNodes
@@ -468,6 +514,108 @@ public class XmlServiceManager
         {
             service.RemoveChild(header);
         }
+    }
+
+    private static void RemoveInvalidEducationExtendedInfoElements(XmlNode service)
+    {
+        var extendedInfo = service.GetNodeByPath("SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/EXTENDED_INFO");
+
+        if (extendedInfo == null)
+            return;
+
+        var invalidNodes = extendedInfo.ChildNodes
+            .Cast<XmlNode>()
+            .Where(n => n.NodeType == XmlNodeType.Element
+                && InvalidEducationExtendedInfoElements.Contains(
+                    n.LocalName,
+                    StringComparer.OrdinalIgnoreCase))
+            .ToList();
+
+        foreach (var node in invalidNodes)
+            extendedInfo.RemoveChild(node);
+    }
+
+    private static void NormalizeLocationEmailElements(XmlNode service)
+    {
+        if (service.OwnerDocument is not XmlDocument doc)
+            return;
+
+        var locations = service.SelectNodes(".//LOCATION");
+        if (locations == null)
+            return;
+
+        foreach (XmlNode location in locations)
+        {
+            var directEmailNodes = location.ChildNodes
+                .Cast<XmlNode>()
+                .Where(n => n.NodeType == XmlNodeType.Element
+                    && n.LocalName.Equals("EMAIL", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            foreach (var emailNode in directEmailNodes)
+            {
+                var emailValue = emailNode.InnerText;
+                location.RemoveChild(emailNode);
+
+                if (string.IsNullOrWhiteSpace(emailValue))
+                    continue;
+
+                var emailsContainer = location.FindChild("EMAILS");
+                if (emailsContainer == null)
+                {
+                    emailsContainer = doc.CreateElement("EMAILS");
+                    InsertAddressElementBefore(location, emailsContainer, "URL");
+                }
+
+                var hasEmail = emailsContainer.ChildNodes
+                    .Cast<XmlNode>()
+                    .Any(n => n.NodeType == XmlNodeType.Element
+                        && n.LocalName.Equals("EMAIL", StringComparison.OrdinalIgnoreCase));
+
+                if (!hasEmail)
+                {
+                    var emailElement = doc.CreateElement("EMAIL");
+                    emailElement.InnerText = emailValue;
+                    emailsContainer.AppendChild(emailElement);
+                }
+            }
+        }
+    }
+
+    private static void InsertAddressElementBefore(XmlNode location, XmlNode newElement, string beforeElementName)
+    {
+        var beforeIndex = Array.IndexOf(
+            AddressElementOrder,
+            beforeElementName.ToUpperInvariant());
+
+        if (beforeIndex < 0)
+        {
+            location.AppendChild(newElement);
+            return;
+        }
+
+        XmlNode? insertBefore = null;
+
+        foreach (XmlNode child in location.ChildNodes)
+        {
+            if (child.NodeType != XmlNodeType.Element)
+                continue;
+
+            var childIndex = Array.IndexOf(
+                AddressElementOrder,
+                child.LocalName.ToUpperInvariant());
+
+            if (childIndex >= 0 && childIndex >= beforeIndex)
+            {
+                insertBefore = child;
+                break;
+            }
+        }
+
+        if (insertBefore != null)
+            location.InsertBefore(newElement, insertBefore);
+        else
+            location.AppendChild(newElement);
     }
 
     private void EnsureDocumentLoaded()

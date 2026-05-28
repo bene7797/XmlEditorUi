@@ -10,7 +10,7 @@
     {
       "code": "NU1510",
       "level": "Warning",
-      "message": "PackageReference System.Text.Encoding.CodePages will not be pruned. Consider removing this package from your dependencies, as it is likely unnecessary.",
+      "message": "PackageReference System.Text.Encoding.CodePages wird nicht gekürzt. Erwägen Sie, dieses Paket aus Ihren Abhängigkeiten zu entfernen, da es wahrscheinlich nicht erforderlich ist.",
       "projectPath": "C:\\Users\\BenediktStoeck\\Desktop\\Cdemy Projekte\\Xml - csharp\\XmlEditorUi\\XmlEditorUi.csproj",
       "warningLevel": 1,
       "filePath": "C:\\Users\\BenediktStoeck\\Desktop\\Cdemy Projekte\\Xml - csharp\\XmlEditorUi\\XmlEditorUi.csproj",

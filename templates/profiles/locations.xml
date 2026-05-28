@@ -1,0 +1,22 @@
+<LOCATIONS>
+    <LOCATION_PROFILE name="Leipzig">
+        <NAME>cdemy GmbH</NAME>
+        <NAME2>Code Academy</NAME2>
+        <STREET>Eisenbahnstraße 121</STREET>
+        <ZIP>04315</ZIP>
+        <CITY>Leipzig</CITY>
+        <STATE>Sachsen</STATE>
+        <PHONE>+49.341.99990117</PHONE>
+        <EMAIL>info@cdemy.de</EMAIL>
+    </LOCATION_PROFILE>
+    <LOCATION_PROFILE name="Kassel">
+        <NAME>cdemy GmbH</NAME>
+        <NAME2>Code Academy</NAME2>
+        <STREET>...</STREET>
+        <ZIP>...</ZIP>
+        <CITY>Kassel</CITY>
+        <STATE>Hessen</STATE>
+        <PHONE>...</PHONE>
+        <EMAIL>...</EMAIL>
+    </LOCATION_PROFILE>
+</LOCATIONS>

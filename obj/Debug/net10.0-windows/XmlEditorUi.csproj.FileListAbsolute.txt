@@ -1,3 +1,12 @@
+C:\Users\BenediktStoeck\Desktop\Cdemy Projekte\Xml - csharp\XmlEditorUi\bin\Debug\net10.0-windows\schema.xsd
+C:\Users\BenediktStoeck\Desktop\Cdemy Projekte\Xml - csharp\XmlEditorUi\bin\Debug\net10.0-windows\templates\profiles\coursetypes.xml
+C:\Users\BenediktStoeck\Desktop\Cdemy Projekte\Xml - csharp\XmlEditorUi\bin\Debug\net10.0-windows\templates\profiles\locations.xml
+C:\Users\BenediktStoeck\Desktop\Cdemy Projekte\Xml - csharp\XmlEditorUi\bin\Debug\net10.0-windows\templates\services\Externenprüfung Kassel.xml
+C:\Users\BenediktStoeck\Desktop\Cdemy Projekte\Xml - csharp\XmlEditorUi\bin\Debug\net10.0-windows\templates\services\Kassel - Vollzeit - Extended.xml
+C:\Users\BenediktStoeck\Desktop\Cdemy Projekte\Xml - csharp\XmlEditorUi\bin\Debug\net10.0-windows\templates\services\Leipzig Vollzeit - Extended.xml
+C:\Users\BenediktStoeck\Desktop\Cdemy Projekte\Xml - csharp\XmlEditorUi\bin\Debug\net10.0-windows\templates\services\Main.xml
+C:\Users\BenediktStoeck\Desktop\Cdemy Projekte\Xml - csharp\XmlEditorUi\bin\Debug\net10.0-windows\templates\services\Kassel - Teilzeit - Extended.xml
+C:\Users\BenediktStoeck\Desktop\Cdemy Projekte\Xml - csharp\XmlEditorUi\bin\Debug\net10.0-windows\templates\services\Leipzig - Teilzeit.xml
 C:\Users\BenediktStoeck\Desktop\Cdemy Projekte\Xml - csharp\XmlEditorUi\bin\Debug\net10.0-windows\XmlEditorUi.exe
 C:\Users\BenediktStoeck\Desktop\Cdemy Projekte\Xml - csharp\XmlEditorUi\bin\Debug\net10.0-windows\XmlEditorUi.deps.json
 C:\Users\BenediktStoeck\Desktop\Cdemy Projekte\Xml - csharp\XmlEditorUi\bin\Debug\net10.0-windows\XmlEditorUi.runtimeconfig.json
@@ -7,10 +16,9 @@ C:\Users\BenediktStoeck\Desktop\Cdemy Projekte\Xml - csharp\XmlEditorUi\obj\Debu
 C:\Users\BenediktStoeck\Desktop\Cdemy Projekte\Xml - csharp\XmlEditorUi\obj\Debug\net10.0-windows\XmlEditorUi.AssemblyInfoInputs.cache
 C:\Users\BenediktStoeck\Desktop\Cdemy Projekte\Xml - csharp\XmlEditorUi\obj\Debug\net10.0-windows\XmlEditorUi.AssemblyInfo.cs
 C:\Users\BenediktStoeck\Desktop\Cdemy Projekte\Xml - csharp\XmlEditorUi\obj\Debug\net10.0-windows\XmlEditorUi.csproj.CoreCompileInputs.cache
+C:\Users\BenediktStoeck\Desktop\Cdemy Projekte\Xml - csharp\XmlEditorUi\obj\Debug\net10.0-windows\XmlEditorUi.sourcelink.json
 C:\Users\BenediktStoeck\Desktop\Cdemy Projekte\Xml - csharp\XmlEditorUi\obj\Debug\net10.0-windows\XmlEditorUi.dll
 C:\Users\BenediktStoeck\Desktop\Cdemy Projekte\Xml - csharp\XmlEditorUi\obj\Debug\net10.0-windows\refint\XmlEditorUi.dll
 C:\Users\BenediktStoeck\Desktop\Cdemy Projekte\Xml - csharp\XmlEditorUi\obj\Debug\net10.0-windows\XmlEditorUi.pdb
 C:\Users\BenediktStoeck\Desktop\Cdemy Projekte\Xml - csharp\XmlEditorUi\obj\Debug\net10.0-windows\XmlEditorUi.genruntimeconfig.cache
 C:\Users\BenediktStoeck\Desktop\Cdemy Projekte\Xml - csharp\XmlEditorUi\obj\Debug\net10.0-windows\ref\XmlEditorUi.dll
-C:\Users\BenediktStoeck\Desktop\Cdemy Projekte\Xml - csharp\XmlEditorUi\obj\Debug\net10.0-windows\XmlEditorUi.sourcelink.json
-C:\Users\BenediktStoeck\Desktop\Cdemy Projekte\Xml - csharp\XmlEditorUi\bin\Debug\net10.0-windows\schema.xsd

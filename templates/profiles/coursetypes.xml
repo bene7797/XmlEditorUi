@@ -1,0 +1,13 @@
+<COURSE_TYPES>
+    <COURSE_TYPE_PROFILE name="Vollzeit">
+        <INSTRUCTION_TIME type="1">Vollzeit</INSTRUCTION_TIME>
+        <DURATION type="7" />
+    </COURSE_TYPE_PROFILE>
+    <COURSE_TYPE_PROFILE name="Teilzeit">
+        <INSTRUCTION_TIME type="2">Teilzeit</INSTRUCTION_TIME>
+        <DURATION type="8" />
+    </COURSE_TYPE_PROFILE>
+    <COURSE_TYPE_PROFILE name="Externenprüfung">
+        <EDUCATION_TYPE type="110">Externenprüfung</EDUCATION_TYPE>
+    </COURSE_TYPE_PROFILE>
+</COURSE_TYPES>
