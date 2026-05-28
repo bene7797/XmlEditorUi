@@ -98,8 +98,7 @@ public class XmlServiceManager
         var newProductId = GenerateNewProductId();
         newService.SetChildText("PRODUCT_ID", newProductId);
 
-        if (GetUpdateCatalogNode() != null)
-            newService.SetAttribute("mode", "new");
+        ApplyServiceModeForWorkingCopy(newService);
 
         insertParent.AppendChild(newService);
         serviceStates[newService] = ServiceState.New;
@@ -125,8 +124,7 @@ public class XmlServiceManager
         var newProductId = GenerateNewProductId();
         importedService.SetChildText("PRODUCT_ID", newProductId);
 
-        if (GetUpdateCatalogNode() != null)
-            importedService.SetAttribute("mode", "new");
+        ApplyServiceModeForWorkingCopy(importedService);
 
         var insertParent = GetServiceInsertParent();
 
@@ -153,8 +151,7 @@ public class XmlServiceManager
         var newProductId = GenerateNewProductId();
         importedService.SetChildText("PRODUCT_ID", newProductId);
 
-        if (GetUpdateCatalogNode() != null)
-            importedService.SetAttribute("mode", "new");
+        ApplyServiceModeForWorkingCopy(importedService);
 
         var insertParent = GetServiceInsertParent();
 
@@ -405,7 +402,7 @@ public class XmlServiceManager
         {
             var imported = exportDoc.ImportNode(service, deep: true);
             SanitizeServiceForExport(imported);
-            SetAttributeForDocument(exportDoc, imported, "mode", "new");
+            ApplyServiceModeForExport(imported, isUpdateCatalogExport: false);
             catalog.AppendChild(imported);
         }
 
@@ -460,24 +457,46 @@ public class XmlServiceManager
         {
             var imported = exportDoc.ImportNode(service, deep: true);
             SanitizeServiceForExport(imported);
-            SetAttributeForDocument(exportDoc, imported, "mode", "new");
+            serviceStates.TryGetValue(service, out var state);
+            ApplyServiceModeForExport(imported, isUpdateCatalogExport: true, state);
             newNode.AppendChild(imported);
         }
 
         return exportDoc;
     }
 
-    private static void SetAttributeForDocument(XmlDocument doc, XmlNode node, string name, string value)
+    private void ApplyServiceModeForWorkingCopy(XmlNode service)
     {
-        var attr = node.Attributes?[name];
+        if (GetUpdateCatalogNode() != null)
+            service.SetAttribute("mode", "new");
+        else
+            RemoveServiceModeAttribute(service);
+    }
 
-        if (attr == null)
+    /// <summary>
+    /// mode="new" ist laut OpenQCat optional (fixed="new"). Nur bei UPDATE_CATALOG/NEW für
+    /// wirklich neue Services setzen – nicht bei Vollkatalog oder Updates bestehender Angebote.
+    /// </summary>
+    private static void ApplyServiceModeForExport(
+        XmlNode service,
+        bool isUpdateCatalogExport,
+        ServiceState? state = null)
+    {
+        if (!isUpdateCatalogExport)
         {
-            attr = doc.CreateAttribute(name);
-            node.Attributes?.Append(attr);
+            RemoveServiceModeAttribute(service);
+            return;
         }
 
-        attr.Value = value;
+        if (state == ServiceState.New)
+            service.SetAttribute("mode", "new");
+        else
+            RemoveServiceModeAttribute(service);
+    }
+
+    private static void RemoveServiceModeAttribute(XmlNode service)
+    {
+        service.Attributes?.RemoveNamedItem("mode");
     }
 
     private void CaptureHeaderFromDocument()

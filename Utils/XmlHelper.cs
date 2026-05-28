@@ -193,4 +193,65 @@ public static class XmlHelper
     {
         return node.ChildNodes.Cast<XmlNode>().Any(child => child.NodeType == XmlNodeType.Element);
     }
+
+    public static IEnumerable<string> GetRepeatingChildTexts(this XmlNode parent, string elementName)
+    {
+        return parent.ChildNodes
+            .Cast<XmlNode>()
+            .Where(n => n.NodeType == XmlNodeType.Element
+                && n.LocalName.Equals(elementName, StringComparison.OrdinalIgnoreCase))
+            .Select(n => n.InnerText.Trim())
+            .Where(v => !string.IsNullOrEmpty(v));
+    }
+
+    public static void SetRepeatingChildElements(
+        this XmlNode parent,
+        string elementName,
+        IEnumerable<string> values,
+        string? insertAfterLocalName = null,
+        string? insertBeforeLocalName = null)
+    {
+        var document = parent.OwnerDocument ?? (parent as XmlDocument)
+            ?? throw new InvalidOperationException("Kein XmlDocument verfügbar.");
+
+        var existing = parent.ChildNodes
+            .Cast<XmlNode>()
+            .Where(n => n.NodeType == XmlNodeType.Element
+                && n.LocalName.Equals(elementName, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        foreach (var node in existing)
+            parent.RemoveChild(node);
+
+        var insertAfter = insertAfterLocalName == null
+            ? null
+            : parent.ChildNodes
+                .Cast<XmlNode>()
+                .LastOrDefault(n => n.LocalName.Equals(insertAfterLocalName, StringComparison.OrdinalIgnoreCase));
+
+        var insertBefore = insertBeforeLocalName == null
+            ? null
+            : parent.ChildNodes
+                .Cast<XmlNode>()
+                .FirstOrDefault(n => n.LocalName.Equals(insertBeforeLocalName, StringComparison.OrdinalIgnoreCase));
+
+        foreach (var value in values)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                continue;
+
+            var element = document.CreateElement(elementName);
+            element.InnerText = value.Trim();
+
+            if (insertAfter != null)
+            {
+                parent.InsertAfter(element, insertAfter);
+                insertAfter = element;
+            }
+            else if (insertBefore != null)
+                parent.InsertBefore(element, insertBefore);
+            else
+                parent.AppendChild(element);
+        }
+    }
 }

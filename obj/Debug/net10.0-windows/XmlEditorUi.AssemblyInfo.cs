@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("XmlEditorUi")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fb6280a870c2fbfffb468c1093b51b5db1e3b822")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1b0ec83fbbcf9733910d56390bf0ca070198988b")]
 [assembly: System.Reflection.AssemblyProductAttribute("XmlEditorUi")]
 [assembly: System.Reflection.AssemblyTitleAttribute("XmlEditorUi")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

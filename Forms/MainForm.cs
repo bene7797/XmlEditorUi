@@ -35,6 +35,7 @@ public class MainForm : Form
 
     // Main Template Tab
     private readonly DataGridView mainTemplateGrid = new();
+    private readonly DataGridView mainTemplateKeywordsGrid = new();
     private readonly PropertyGrid mainTemplatePropertyGrid = new();
     private readonly Button saveMainTemplateButton = new();
 
@@ -281,7 +282,7 @@ public class MainForm : Form
         mainTemplateGrid.Left = 10;
         mainTemplateGrid.Top = 50;
         mainTemplateGrid.Width = 1160;
-        mainTemplateGrid.Height = 240;
+        mainTemplateGrid.Height = 180;
         mainTemplateGrid.AllowUserToAddRows = false;
         mainTemplateGrid.AllowUserToDeleteRows = false;
         mainTemplateGrid.RowHeadersVisible = false;
@@ -292,15 +293,43 @@ public class MainForm : Form
         mainTemplateGrid.CellValueChanged += (s, e) => MainTemplateGrid_CellValueChanged(e);
         mainTemplateGrid.CellClick += MainTemplateGrid_CellClick;
 
+        var keywordsLabel = new Label
+        {
+            Text = "Schlagwörter (KEYWORD) – eine Zeile pro Schlagwort:",
+            Left = 10,
+            Top = 238,
+            Width = 500,
+            Height = 20
+        };
+
+        mainTemplateKeywordsGrid.Left = 10;
+        mainTemplateKeywordsGrid.Top = 260;
+        mainTemplateKeywordsGrid.Width = 1160;
+        mainTemplateKeywordsGrid.Height = 120;
+        mainTemplateKeywordsGrid.AllowUserToAddRows = true;
+        mainTemplateKeywordsGrid.AllowUserToDeleteRows = true;
+        mainTemplateKeywordsGrid.RowHeadersVisible = false;
+        mainTemplateKeywordsGrid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+        mainTemplateKeywordsGrid.Columns.Add("Keyword", "Schlagwort");
+        mainTemplateKeywordsGrid.CellValueChanged += (_, _) => MainTemplateKeywordsGrid_Changed();
+        mainTemplateKeywordsGrid.UserDeletedRow += (_, _) => MainTemplateKeywordsGrid_Changed();
+        mainTemplateKeywordsGrid.CurrentCellDirtyStateChanged += (_, _) =>
+        {
+            if (mainTemplateKeywordsGrid.IsCurrentCellDirty)
+                mainTemplateKeywordsGrid.CommitEdit(DataGridViewDataErrorContexts.Commit);
+        };
+
         mainTemplatePropertyGrid.Left = 10;
-        mainTemplatePropertyGrid.Top = 300;
+        mainTemplatePropertyGrid.Top = 390;
         mainTemplatePropertyGrid.Width = 1160;
-        mainTemplatePropertyGrid.Height = 330;
+        mainTemplatePropertyGrid.Height = 240;
         mainTemplatePropertyGrid.ToolbarVisible = false;
         mainTemplatePropertyGrid.HelpVisible = false;
 
         mainTemplateTab.Controls.Add(saveMainTemplateButton);
         mainTemplateTab.Controls.Add(mainTemplateGrid);
+        mainTemplateTab.Controls.Add(keywordsLabel);
+        mainTemplateTab.Controls.Add(mainTemplateKeywordsGrid);
         mainTemplateTab.Controls.Add(mainTemplatePropertyGrid);
     }
 
@@ -482,17 +511,12 @@ public class MainForm : Form
         if (doc.DocumentElement == null)
             return;
 
-        // Lade Quick Fields
-        mainTemplateGrid.Rows.Clear();
         var service = doc.DocumentElement;
+        mainTemplateTab.Tag = (mainTemplate, doc);
 
-        // Zeige alle wichtigen Felder
-        var allFields = CourseTypeTemplateFields.EssentialFields
-            .Concat(LocationTemplateFields.EssentialFields)
-            .Distinct()
-            .ToList();
+        mainTemplateGrid.Rows.Clear();
 
-        foreach (var field in allFields)
+        foreach (var field in MainTemplateFields.EssentialFields)
         {
             var value = service.GetTextByPath(field.Path) ?? string.Empty;
             var rowIndex = mainTemplateGrid.Rows.Add(field.Label, value);
@@ -500,7 +524,48 @@ public class MainForm : Form
             row.Tag = field.Path;
         }
 
+        LoadMainTemplateKeywords(service);
         mainTemplatePropertyGrid.SelectedObject = new CourseEditableObject(service, onlyFilledFields: true);
+    }
+
+    private void LoadMainTemplateKeywords(XmlNode service)
+    {
+        mainTemplateKeywordsGrid.Rows.Clear();
+
+        var serviceDetails = service.GetNodeByPath(MainTemplateFields.KeywordsContainerPath);
+        if (serviceDetails == null)
+            return;
+
+        foreach (var keyword in serviceDetails.GetRepeatingChildTexts("KEYWORD"))
+            mainTemplateKeywordsGrid.Rows.Add(keyword);
+    }
+
+    private void ApplyMainTemplateKeywords(XmlNode service)
+    {
+        var serviceDetails = service.GetNodeByPath(MainTemplateFields.KeywordsContainerPath);
+        if (serviceDetails == null)
+            return;
+
+        var keywords = mainTemplateKeywordsGrid.Rows
+            .Cast<DataGridViewRow>()
+            .Where(r => !r.IsNewRow)
+            .Select(r => r.Cells[0].Value?.ToString()?.Trim() ?? string.Empty)
+            .Where(v => !string.IsNullOrWhiteSpace(v))
+            .ToList();
+
+        serviceDetails.SetRepeatingChildElements(
+            "KEYWORD",
+            keywords,
+            insertAfterLocalName: "SERVICE_DATE",
+            insertBeforeLocalName: "TARGET_GROUP");
+    }
+
+    private void MainTemplateKeywordsGrid_Changed()
+    {
+        if (mainTemplateTab.Tag is not (_, XmlDocument doc) || doc.DocumentElement == null)
+            return;
+
+        ApplyMainTemplateKeywords(doc.DocumentElement);
     }
 
     private void LoadCourseTypeTemplate()
@@ -616,28 +681,42 @@ public class MainForm : Form
         if (e.RowIndex < 0 || e.ColumnIndex != 1)
             return;
 
-        var templates = templateRepository.GetTemplateFiles();
-        var mainTemplate = templates.FirstOrDefault(t =>
-            Path.GetFileName(t).Equals("Main.xml", StringComparison.OrdinalIgnoreCase));
-
-        if (mainTemplate == null)
-            return;
-
-        var doc = new XmlDocument();
-        doc.PreserveWhitespace = true;
-        doc.Load(mainTemplate);
-
-        if (doc.DocumentElement == null)
+        if (!TryGetMainTemplateDocument(out var doc, out var path) || doc.DocumentElement == null)
             return;
 
         var row = mainTemplateGrid.Rows[e.RowIndex];
-        if (row.Tag is not string path)
+        if (row.Tag is not string fieldPath)
             return;
 
         var newValue = row.Cells[1].Value?.ToString() ?? "";
-        doc.DocumentElement.SetNodeByPath(path, newValue);
+        doc.DocumentElement.SetNodeByPath(fieldPath, newValue);
+        mainTemplateTab.Tag = (path!, doc);
+    }
 
-        mainTemplateTab.Tag = (mainTemplate, doc);
+    private bool TryGetMainTemplateDocument(out XmlDocument doc, out string? path)
+    {
+        if (mainTemplateTab.Tag is (string p, XmlDocument d))
+        {
+            path = p;
+            doc = d;
+            return true;
+        }
+
+        var templates = templateRepository.GetTemplateFiles();
+        path = templates.FirstOrDefault(t =>
+            Path.GetFileName(t).Equals("Main.xml", StringComparison.OrdinalIgnoreCase));
+
+        if (path == null)
+        {
+            doc = new XmlDocument();
+            return false;
+        }
+
+        doc = new XmlDocument();
+        doc.PreserveWhitespace = true;
+        doc.Load(path);
+        mainTemplateTab.Tag = (path, doc);
+        return true;
     }
 
     private void CourseTypeQuickGrid_CellValueChanged(DataGridViewCellEventArgs e)
@@ -703,6 +782,9 @@ public class MainForm : Form
 
         try
         {
+            if (doc.DocumentElement != null)
+                ApplyMainTemplateKeywords(doc.DocumentElement);
+
             doc.Save(path);
             MessageBox.Show("Main Template gespeichert");
             LoadMainTemplate();
