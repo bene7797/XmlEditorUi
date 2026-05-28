@@ -946,6 +946,8 @@ public class MainForm : Form
         serviceManager.MarkFieldAsChanged(selectedCourse, path);
 
         ApplyQuickFieldColor(row, selectedCourse, path);
+        RefreshSelectedCourseTitle();
+        RefreshStatusLists();
     }
     private bool TryParseDate(string? value, out DateTime dt)
     {
@@ -1152,6 +1154,8 @@ public class MainForm : Form
         serviceManager.MarkFieldAsChanged(selectedCourse, path);
 
         ApplyQuickFieldColor(row, selectedCourse, path);
+        RefreshSelectedCourseTitle();
+        RefreshStatusLists();
     }
 
     private void CourseList_SelectedIndexChanged(object? sender, EventArgs e)

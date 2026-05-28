@@ -46,6 +46,9 @@ public class CourseEditableObject : ICustomTypeDescriptor
             if (child.NodeType != XmlNodeType.Element)
                 continue;
 
+            if (child.LocalName.Equals("HEADER", StringComparison.OrdinalIgnoreCase))
+                continue;
+
             var childPath = string.IsNullOrEmpty(prefix)
                 ? child.Name
                 : prefix + "/" + child.Name;
