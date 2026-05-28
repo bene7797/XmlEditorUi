@@ -1,8 +1,8 @@
 <SERVICE>
-            <PRODUCT_ID>375057138</PRODUCT_ID>
-            <COURSE_TYPE>1</COURSE_TYPE>
-            <SUPPLIER_ID_REF type="supplier_specific">274125</SUPPLIER_ID_REF>
-            <SERVICE_DETAILS>
+    <PRODUCT_ID>375057138</PRODUCT_ID>
+    <COURSE_TYPE>1</COURSE_TYPE>
+    <SUPPLIER_ID_REF type="supplier_specific">274125</SUPPLIER_ID_REF>
+    <SERVICE_DETAILS>
                 <TITLE>Vorbereitung auf die Abschlussprüfung / Externenprüfung Fachinformatiker Anwendungsentwicklung / Fachinformatikerin Anwendungsentwicklung</TITLE>
                 <DESCRIPTION_LONG>Die Vorbereitung auf die Abschlussprüfung "Fachinformatiker:in für Anwendungsentwicklung" richtet sich in der Regel an Berufspraktiker oder an Prüfungswiederholer. Daher sind in jedem Fall erhebliche Vorkenntnisse vorhanden.
 

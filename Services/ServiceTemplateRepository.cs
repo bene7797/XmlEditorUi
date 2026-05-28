@@ -1,6 +1,3 @@
-using System;
-using System.IO;
-using System.Linq;
 using System.Xml;
 
 namespace XmlEditorUi;
@@ -13,19 +10,109 @@ public class ServiceTemplateRepository
     {
         this.servicesTemplateFolder = servicesTemplateFolder;
         Directory.CreateDirectory(servicesTemplateFolder);
+        MainTemplateBootstrap.EnsureExternenpruefungTemplate(servicesTemplateFolder);
     }
 
-    public string[] GetTemplateFiles()
+    public static bool IsMainTemplateFile(string filePath)
     {
-        return Directory.GetFiles(servicesTemplateFolder, "*.xml");
+        var name = Path.GetFileName(filePath);
+        return name.Equals(MainTemplateVariants.StandardFileName, StringComparison.OrdinalIgnoreCase)
+            || name.Equals(MainTemplateVariants.ExternFileName, StringComparison.OrdinalIgnoreCase);
     }
 
-    public XmlDocument LoadTemplateDocument(string path)
+    public static bool IsExternenpruefungTemplateFile(string filePath) =>
+        Path.GetFileName(filePath).Contains("Extern", StringComparison.OrdinalIgnoreCase);
+
+    public string[] GetTemplateFiles() => Directory.GetFiles(servicesTemplateFolder, "*.xml");
+
+    public XmlDocument LoadTemplateDocument(string path) => XmlDocumentLoader.LoadFromFile(path);
+
+    public string? FindMainTemplatePath(bool externenpruefung = false)
     {
-        var doc = new XmlDocument();
-        doc.PreserveWhitespace = true;
-        doc.Load(path);
-        return doc;
+        var preferred = externenpruefung
+            ? MainTemplateVariants.ExternFileName
+            : MainTemplateVariants.StandardFileName;
+
+        var path = GetTemplateFiles().FirstOrDefault(f =>
+            Path.GetFileName(f).Equals(preferred, StringComparison.OrdinalIgnoreCase));
+
+        if (path != null)
+            return path;
+
+        return GetTemplateFiles().FirstOrDefault(f =>
+            Path.GetFileName(f).Equals(MainTemplateVariants.StandardFileName, StringComparison.OrdinalIgnoreCase))
+            ?? GetTemplateFiles().FirstOrDefault();
+    }
+
+    public TemplateDocumentSession? FindTemplateByFileNameContains(string text)
+    {
+        var path = GetTemplateFiles().FirstOrDefault(f =>
+            Path.GetFileNameWithoutExtension(f).Contains(text, StringComparison.OrdinalIgnoreCase)
+            && !IsMainTemplateFile(f)
+            && !IsExternenpruefungTemplateFile(f));
+
+        return path == null ? null : TemplateDocumentSession.Load(this, path);
+    }
+
+    public TemplateDocumentSession? FindTemplateByCity(string cityName)
+    {
+        foreach (var file in GetTemplateFiles())
+        {
+            var session = TemplateDocumentSession.Load(this, file);
+            var city = session.Service.GetTextByPath(
+                "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/CITY");
+
+            if (string.Equals(city, cityName, StringComparison.OrdinalIgnoreCase))
+                return session;
+        }
+
+        return FindTemplateByFileNameContains(cityName);
+    }
+
+    public TemplateDocumentSession? LoadMainTemplateSession(string variant = MainTemplateVariants.Standard)
+    {
+        var path = FindMainTemplatePath(MainTemplateVariants.IsExternenpruefung(variant));
+        return path == null ? null : TemplateDocumentSession.Load(this, path);
+    }
+
+    public IReadOnlyList<string> GetDistinctCourseTypeNames()
+    {
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var file in GetTemplateFiles())
+        {
+            if (IsMainTemplateFile(file) || IsExternenpruefungTemplateFile(file))
+                continue;
+
+            var fileName = Path.GetFileNameWithoutExtension(file);
+
+            if (fileName.Contains("Vollzeit", StringComparison.OrdinalIgnoreCase))
+                names.Add("Vollzeit");
+            else if (fileName.Contains("Teilzeit", StringComparison.OrdinalIgnoreCase))
+                names.Add("Teilzeit");
+        }
+
+        return names.OrderBy(n => n).ToList();
+    }
+
+    public IReadOnlyList<string> GetDistinctLocationNames()
+    {
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var file in GetTemplateFiles())
+        {
+            var doc = LoadTemplateDocument(file);
+            if (doc.DocumentElement == null)
+                continue;
+
+            var city = doc.DocumentElement.GetTextByPath(
+                "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/CITY") ?? "";
+
+            if (!string.IsNullOrWhiteSpace(city) && !city.Equals("Ort ?", StringComparison.OrdinalIgnoreCase))
+                names.Add(city);
+        }
+
+        return names.OrderBy(n => n).ToList();
     }
 
     public void SaveTemplate(XmlNode service, string templateName)
@@ -34,8 +121,7 @@ public class ServiceTemplateRepository
         var path = Path.Combine(servicesTemplateFolder, safeName + ".xml");
 
         var templateDoc = new XmlDocument();
-        var imported = templateDoc.ImportNode(service, deep: true);
-        templateDoc.AppendChild(imported);
+        templateDoc.AppendChild(templateDoc.ImportNode(service, deep: true));
         templateDoc.Save(path);
     }
 
@@ -47,7 +133,6 @@ public class ServiceTemplateRepository
                 continue;
 
             var doc = LoadTemplateDocument(file);
-
             if (doc.DocumentElement == null)
                 continue;
 
@@ -64,23 +149,24 @@ public class ServiceTemplateRepository
 
     public void ApplyInstructionTimeToMatchingTemplates(string currentTemplatePath, string instructionTime, string newValue)
     {
+        const string instructionPath = "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/EXTENDED_INFO/INSTRUCTION_TIME";
+
         foreach (var file in GetTemplateFiles())
         {
             if (file.Equals(currentTemplatePath, StringComparison.OrdinalIgnoreCase))
                 continue;
 
             var doc = LoadTemplateDocument(file);
-
             if (doc.DocumentElement == null)
                 continue;
 
             var service = doc.DocumentElement;
-            var currentValue = service.GetTextByPath("SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/EXTENDED_INFO/INSTRUCTION_TIME");
+            var currentValue = service.GetTextByPath(instructionPath);
 
             if (!string.Equals(currentValue, instructionTime, StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            service.SetNodeByPath("SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/EXTENDED_INFO/INSTRUCTION_TIME", newValue);
+            service.SetNodeByPath(instructionPath, newValue);
             doc.Save(file);
         }
     }

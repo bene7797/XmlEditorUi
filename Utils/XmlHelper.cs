@@ -45,8 +45,8 @@ public static class XmlHelper
             var attributeName = parts[1];
 
             var element = startNode.GetNodeByPath(elementPath);
-            if (element?.Attributes?[attributeName] != null)
-                return element.Attributes[attributeName].Value;
+            if (element?.Attributes?[attributeName] is { } attribute)
+                return attribute.Value;
 
             return null;
         }
@@ -154,12 +154,13 @@ public static class XmlHelper
         if (node.Attributes == null)
             throw new InvalidOperationException("XmlNode kann keine Attribute haben.");
 
-        var attr = node.Attributes?[name];
+        var attributes = node.Attributes;
+        var attr = attributes[name];
 
         if (attr == null)
         {
             attr = document.CreateAttribute(name);
-            node.Attributes.Append(attr);
+            attributes.Append(attr);
         }
 
         attr.Value = value;

@@ -1,20 +1,15 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Windows.Forms;
 
 namespace XmlEditorUi;
 
 /// <summary>
-/// Dialog zur Auswahl von Ort und Beschäftigungsart für neue Services.
-/// 
-/// Benutzer wählt:
-/// 1. Ort (Leipzig/Kassel)
-/// 2. Beschäftigungsart (Vollzeit/Teilzeit/Externenprüfung)
+/// Dialog zur Auswahl von Ort, Main-Template und optional Beschäftigungsart (nur bei Standard-Main-Template).
 /// </summary>
 public class ServiceConfigurationForm : Form
 {
     private readonly ComboBox locationCombo = new();
+    private readonly ComboBox mainTemplateCombo = new();
+    private readonly Label courseTypeLabel = new();
     private readonly ComboBox courseTypeCombo = new();
     private readonly Button okButton = new();
     private readonly Button cancelButton = new();
@@ -24,6 +19,10 @@ public class ServiceConfigurationForm : Form
 
     public LocationProfile? SelectedLocation { get; private set; }
     public CourseTypeProfile? SelectedCourseType { get; private set; }
+    public string SelectedMainTemplateVariant { get; private set; } = MainTemplateVariants.Standard;
+
+    public bool IsExternenpruefung =>
+        MainTemplateVariants.IsExternenpruefung(SelectedMainTemplateVariant);
 
     public ServiceConfigurationForm(List<LocationProfile> locations, List<CourseTypeProfile> courseTypes)
     {
@@ -31,74 +30,63 @@ public class ServiceConfigurationForm : Form
         this.courseTypes = courseTypes;
 
         Text = "Service erstellen";
-        Width = 400;
-        Height = 250;
+        Width = 420;
+        Height = 300;
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
 
-        // Ort Label
-        var locationLabel = new Label
-        {
-            Text = "Ort:",
-            Left = 20,
-            Top = 20,
-            Width = 80,
-            Height = 20
-        };
-
-        locationCombo.Left = 120;
-        locationCombo.Top = 20;
-        locationCombo.Width = 240;
-        locationCombo.Height = 25;
+        var locationLabel = new Label { Text = "Ort:", Left = 20, Top = 20, Width = 120, Height = 20 };
+        locationCombo.SetBounds(140, 18, 250, 25);
         locationCombo.DropDownStyle = ComboBoxStyle.DropDownList;
         locationCombo.Items.AddRange(locations.Select(l => l.Name).ToArray());
 
-        // Beschäftigungsart Label
-        var courseTypeLabel = new Label
-        {
-            Text = "Beschäftigungsart:",
-            Left = 20,
-            Top = 60,
-            Width = 100,
-            Height = 20
-        };
+        var mainTemplateLabel = new Label { Text = "Main-Template:", Left = 20, Top = 58, Width = 120, Height = 20 };
+        mainTemplateCombo.SetBounds(140, 56, 250, 25);
+        mainTemplateCombo.DropDownStyle = ComboBoxStyle.DropDownList;
+        mainTemplateCombo.Items.AddRange(MainTemplateVariants.All.Cast<object>().ToArray());
+        mainTemplateCombo.SelectedIndexChanged += (_, _) => UpdateCourseTypeVisibility();
 
-        courseTypeCombo.Left = 120;
-        courseTypeCombo.Top = 60;
-        courseTypeCombo.Width = 240;
-        courseTypeCombo.Height = 25;
+        courseTypeLabel.Text = "Beschäftigungsart:";
+        courseTypeLabel.SetBounds(20, 96, 120, 20);
+        courseTypeCombo.SetBounds(140, 94, 250, 25);
         courseTypeCombo.DropDownStyle = ComboBoxStyle.DropDownList;
         courseTypeCombo.Items.AddRange(courseTypes.Select(c => c.Name).ToArray());
 
-        // OK Button
         okButton.Text = "Erstellen";
-        okButton.Left = 210;
-        okButton.Top = 130;
-        okButton.Width = 150;
-        okButton.Height = 30;
+        okButton.SetBounds(220, 180, 150, 30);
         okButton.Click += OkButton_Click;
 
-        // Cancel Button
         cancelButton.Text = "Abbrechen";
-        cancelButton.Left = 50;
-        cancelButton.Top = 130;
-        cancelButton.Width = 150;
-        cancelButton.Height = 30;
-        cancelButton.Click += (s, e) => DialogResult = DialogResult.Cancel;
+        cancelButton.SetBounds(60, 180, 150, 30);
+        cancelButton.Click += (_, _) => DialogResult = DialogResult.Cancel;
 
-        Controls.Add(locationLabel);
-        Controls.Add(locationCombo);
-        Controls.Add(courseTypeLabel);
-        Controls.Add(courseTypeCombo);
-        Controls.Add(okButton);
-        Controls.Add(cancelButton);
+        Controls.AddRange([
+            locationLabel, locationCombo,
+            mainTemplateLabel, mainTemplateCombo,
+            courseTypeLabel, courseTypeCombo,
+            okButton, cancelButton
+        ]);
 
-        // Defaults
         if (locationCombo.Items.Count > 0)
             locationCombo.SelectedIndex = 0;
-        if (courseTypeCombo.Items.Count > 0)
+        if (mainTemplateCombo.Items.Count > 0)
+            mainTemplateCombo.SelectedIndex = 0;
+
+        UpdateCourseTypeVisibility();
+    }
+
+    private void UpdateCourseTypeVisibility()
+    {
+        var isExtern = mainTemplateCombo.SelectedItem is string variant
+            && MainTemplateVariants.IsExternenpruefung(variant);
+
+        courseTypeLabel.Visible = !isExtern;
+        courseTypeCombo.Visible = !isExtern;
+        courseTypeCombo.Enabled = !isExtern;
+
+        if (!isExtern && courseTypeCombo.SelectedIndex < 0 && courseTypeCombo.Items.Count > 0)
             courseTypeCombo.SelectedIndex = 0;
     }
 
@@ -110,14 +98,23 @@ public class ServiceConfigurationForm : Form
             return;
         }
 
-        if (courseTypeCombo.SelectedIndex < 0)
+        if (mainTemplateCombo.SelectedItem is not string mainVariant)
+        {
+            MessageBox.Show("Bitte Main-Template auswählen.");
+            return;
+        }
+
+        var isExtern = MainTemplateVariants.IsExternenpruefung(mainVariant);
+
+        if (!isExtern && courseTypeCombo.SelectedIndex < 0)
         {
             MessageBox.Show("Bitte Beschäftigungsart auswählen.");
             return;
         }
 
         SelectedLocation = locations[locationCombo.SelectedIndex];
-        SelectedCourseType = courseTypes[courseTypeCombo.SelectedIndex];
+        SelectedMainTemplateVariant = mainVariant;
+        SelectedCourseType = isExtern ? null : courseTypes[courseTypeCombo.SelectedIndex];
 
         DialogResult = DialogResult.OK;
         Close();

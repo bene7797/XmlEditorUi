@@ -253,9 +253,24 @@ public class XmlServiceManager
     {
         EnsureDocumentLoaded();
 
-        return deletedServices.Count > 0
+        return ShouldUseUpdateCatalogExport()
             ? BuildUpdateCatalogExport()
             : BuildNewCatalogExport();
+    }
+
+    /// <summary>
+    /// XSD: OPENQCAT enthält entweder NEW_CATALOG oder UPDATE_CATALOG (xsd:choice).
+    /// UPDATE_CATALOG bei Änderungen an einem bestehenden Katalog (neu/geändert/gelöscht).
+    /// </summary>
+    private bool ShouldUseUpdateCatalogExport()
+    {
+        if (deletedServices.Count > 0)
+            return true;
+
+        if (GetUpdateCatalogNode() != null)
+            return true;
+
+        return serviceStates.Values.Any(s => s is ServiceState.New or ServiceState.Updated);
     }
 
     public void ValidateWithSchema(string xmlPath, string schemaPath)
@@ -385,12 +400,7 @@ public class XmlServiceManager
 
         exportDoc.AppendChild(root);
 
-        // Add header template if available
-        if (headerTemplate != null)
-        {
-            var importedHeader = exportDoc.ImportNode(headerTemplate, deep: true);
-            root.AppendChild(importedHeader);
-        }
+        AppendExportHeader(exportDoc, root);
 
         var catalog = exportDoc.CreateElement("NEW_CATALOG");
         catalog.SetAttribute("FULLCATALOG", "1");
@@ -421,31 +431,26 @@ public class XmlServiceManager
         root.SetAttribute("noNamespaceSchemaLocation", "http://www.w3.org/2001/XMLSchema-instance", "openQ-cat.V1.1.xsd");
         exportDoc.AppendChild(root);
 
-        // Add header template if available
-        if (headerTemplate != null)
-        {
-            var importedHeader = exportDoc.ImportNode(headerTemplate, deep: true);
-            root.AppendChild(importedHeader);
-        }
+        AppendExportHeader(exportDoc, root);
 
         var catalog = exportDoc.CreateElement("UPDATE_CATALOG");
-        catalog.SetAttribute("seq_number", "1");
+        catalog.SetAttribute("seq_number", GetNextUpdateCatalogSeqNumber().ToString());
         root.AppendChild(catalog);
 
-        var deleteNode = exportDoc.CreateElement("DELETE");
-        catalog.AppendChild(deleteNode);
-
-        foreach (var deleted in deletedServices)
+        if (deletedServices.Count > 0)
         {
-            var deleteService = exportDoc.CreateElement("SERVICE");
-            var productIdNode = exportDoc.CreateElement("PRODUCT_ID");
-            productIdNode.InnerText = deleted.ProductId;
-            deleteService.AppendChild(productIdNode);
-            deleteNode.AppendChild(deleteService);
-        }
+            var deleteNode = exportDoc.CreateElement("DELETE");
+            catalog.AppendChild(deleteNode);
 
-        var newNode = exportDoc.CreateElement("NEW");
-        catalog.AppendChild(newNode);
+            foreach (var deleted in deletedServices)
+            {
+                var deleteService = exportDoc.CreateElement("SERVICE");
+                var productIdNode = exportDoc.CreateElement("PRODUCT_ID");
+                productIdNode.InnerText = deleted.ProductId;
+                deleteService.AppendChild(productIdNode);
+                deleteNode.AppendChild(deleteService);
+            }
+        }
 
         var servicesToExport = GetActiveServices()
             .Where(service =>
@@ -453,16 +458,32 @@ public class XmlServiceManager
                 && (state == ServiceState.New || state == ServiceState.Updated))
             .ToList();
 
-        foreach (var service in servicesToExport)
+        if (servicesToExport.Count > 0)
         {
-            var imported = exportDoc.ImportNode(service, deep: true);
-            SanitizeServiceForExport(imported);
-            serviceStates.TryGetValue(service, out var state);
-            ApplyServiceModeForExport(imported, isUpdateCatalogExport: true, state);
-            newNode.AppendChild(imported);
+            var newNode = exportDoc.CreateElement("NEW");
+            catalog.AppendChild(newNode);
+
+            foreach (var service in servicesToExport)
+            {
+                var imported = exportDoc.ImportNode(service, deep: true);
+                SanitizeServiceForExport(imported);
+                serviceStates.TryGetValue(service, out var state);
+                ApplyServiceModeForExport(imported, isUpdateCatalogExport: true, state);
+                newNode.AppendChild(imported);
+            }
         }
 
         return exportDoc;
+    }
+
+    private int GetNextUpdateCatalogSeqNumber()
+    {
+        var updateCatalog = GetUpdateCatalogNode();
+        if (updateCatalog?.Attributes?["seq_number"]?.Value is { } value
+            && int.TryParse(value, out var current))
+            return current + 1;
+
+        return 1;
     }
 
     private void ApplyServiceModeForWorkingCopy(XmlNode service)
@@ -497,6 +518,52 @@ public class XmlServiceManager
     private static void RemoveServiceModeAttribute(XmlNode service)
     {
         service.Attributes?.RemoveNamedItem("mode");
+    }
+
+    private void AppendExportHeader(XmlDocument exportDoc, XmlElement root)
+    {
+        if (headerTemplate == null)
+            return;
+
+        var importedHeader = exportDoc.ImportNode(headerTemplate, deep: true);
+        ApplyExportGenerationDate(importedHeader);
+        root.AppendChild(importedHeader);
+    }
+
+    private static void ApplyExportGenerationDate(XmlNode header)
+    {
+        var catalog = header.ChildNodes
+            .Cast<XmlNode>()
+            .FirstOrDefault(n => n.LocalName.Equals("CATALOG", StringComparison.OrdinalIgnoreCase));
+
+        if (catalog == null)
+            return;
+
+        var generationDate = catalog.ChildNodes
+            .Cast<XmlNode>()
+            .FirstOrDefault(n => n.LocalName.Equals("GENERATION_DATE", StringComparison.OrdinalIgnoreCase));
+
+        var value = FormatGenerationDate(DateTime.Now);
+
+        if (generationDate != null)
+        {
+            generationDate.InnerText = value;
+            return;
+        }
+
+        var doc = catalog.OwnerDocument;
+        if (doc == null)
+            return;
+
+        var newNode = doc.CreateElement("GENERATION_DATE");
+        newNode.InnerText = value;
+        catalog.AppendChild(newNode);
+    }
+
+    private static string FormatGenerationDate(DateTime dateTime)
+    {
+        var offset = TimeZoneInfo.Local.GetUtcOffset(dateTime);
+        return new DateTimeOffset(dateTime, offset).ToString("yyyy-MM-dd'T'HH:mm:ss.fffzzz");
     }
 
     private void CaptureHeaderFromDocument()

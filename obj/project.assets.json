@@ -1,78 +1,11 @@
 {
   "version": 3,
   "targets": {
-    "net10.0-windows7.0": {
-      "System.Text.Encoding.CodePages/10.0.7": {
-        "type": "package",
-        "compile": {
-          "lib/net10.0/_._": {
-            "related": ".xml"
-          }
-        },
-        "runtime": {
-          "lib/net10.0/_._": {
-            "related": ".xml"
-          }
-        },
-        "build": {
-          "buildTransitive/net8.0/_._": {}
-        },
-        "runtimeTargets": {
-          "runtimes/win/lib/net10.0/_._": {
-            "assetType": "runtime",
-            "rid": "win"
-          }
-        }
-      }
-    }
+    "net10.0-windows7.0": {}
   },
-  "libraries": {
-    "System.Text.Encoding.CodePages/10.0.7": {
-      "sha512": "jVwqeYm6ihKbC8+f9dC+VGlWb6areYWTi+3aHuawZXazkiVs3DxQTNeiMYbcZ/H+JzVkPXfkLUUzUFPQneobFg==",
-      "type": "package",
-      "path": "system.text.encoding.codepages/10.0.7",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "Icon.png",
-        "PACKAGE.md",
-        "THIRD-PARTY-NOTICES.TXT",
-        "buildTransitive/net461/System.Text.Encoding.CodePages.targets",
-        "buildTransitive/net462/_._",
-        "buildTransitive/net8.0/_._",
-        "buildTransitive/netcoreapp2.0/System.Text.Encoding.CodePages.targets",
-        "lib/MonoAndroid10/_._",
-        "lib/MonoTouch10/_._",
-        "lib/net10.0/System.Text.Encoding.CodePages.dll",
-        "lib/net10.0/System.Text.Encoding.CodePages.xml",
-        "lib/net462/System.Text.Encoding.CodePages.dll",
-        "lib/net462/System.Text.Encoding.CodePages.xml",
-        "lib/net8.0/System.Text.Encoding.CodePages.dll",
-        "lib/net8.0/System.Text.Encoding.CodePages.xml",
-        "lib/net9.0/System.Text.Encoding.CodePages.dll",
-        "lib/net9.0/System.Text.Encoding.CodePages.xml",
-        "lib/netstandard2.0/System.Text.Encoding.CodePages.dll",
-        "lib/netstandard2.0/System.Text.Encoding.CodePages.xml",
-        "lib/xamarinios10/_._",
-        "lib/xamarinmac20/_._",
-        "lib/xamarintvos10/_._",
-        "lib/xamarinwatchos10/_._",
-        "runtimes/win/lib/net10.0/System.Text.Encoding.CodePages.dll",
-        "runtimes/win/lib/net10.0/System.Text.Encoding.CodePages.xml",
-        "runtimes/win/lib/net8.0/System.Text.Encoding.CodePages.dll",
-        "runtimes/win/lib/net8.0/System.Text.Encoding.CodePages.xml",
-        "runtimes/win/lib/net9.0/System.Text.Encoding.CodePages.dll",
-        "runtimes/win/lib/net9.0/System.Text.Encoding.CodePages.xml",
-        "system.text.encoding.codepages.10.0.7.nupkg.sha512",
-        "system.text.encoding.codepages.nuspec",
-        "useSharedDesignerContext.txt"
-      ]
-    }
-  },
+  "libraries": {},
   "projectFileDependencyGroups": {
-    "net10.0-windows7.0": [
-      "System.Text.Encoding.CodePages >= 10.0.7"
-    ]
+    "net10.0-windows7.0": []
   },
   "packageFolders": {
     "C:\\Users\\BenediktStoeck\\.nuget\\packages\\": {}
@@ -118,12 +51,6 @@
     "frameworks": {
       "net10.0-windows7.0": {
         "targetAlias": "net10.0-windows",
-        "dependencies": {
-          "System.Text.Encoding.CodePages": {
-            "target": "Package",
-            "version": "[10.0.7, )"
-          }
-        },
         "imports": [
           "net461",
           "net462",
@@ -436,17 +363,5 @@
         }
       }
     }
-  },
-  "logs": [
-    {
-      "code": "NU1510",
-      "level": "Warning",
-      "warningLevel": 1,
-      "message": "PackageReference System.Text.Encoding.CodePages wird nicht gekürzt. Erwägen Sie, dieses Paket aus Ihren Abhängigkeiten zu entfernen, da es wahrscheinlich nicht erforderlich ist.",
-      "libraryId": "System.Text.Encoding.CodePages",
-      "targetGraphs": [
-        "net10.0-windows7.0"
-      ]
-    }
-  ]
+  }
 }

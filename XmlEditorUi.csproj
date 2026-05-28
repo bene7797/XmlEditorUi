@@ -7,7 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="System.Text.Encoding.CodePages" Version="10.0.7" />
+    <Compile Remove="Schema\schema.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Update="schema.xsd">
