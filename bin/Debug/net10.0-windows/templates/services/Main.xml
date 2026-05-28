@@ -3,7 +3,7 @@
         <GENERATOR_INFO>Export OpenQ 3.52.0</GENERATOR_INFO>
         <CATALOG>
             <LANGUAGE>deu</LANGUAGE>
-            <CATALOG_ID>274125-1771521295445</CATALOG_ID>
+            <CATALOG_ID>274125-cdemy-42069</CATALOG_ID>
             <CATALOG_VERSION>Vers_KURSNET</CATALOG_VERSION>
             <CATALOG_NAME>KURSNET-Export</CATALOG_NAME>
             <GENERATION_DATE>2026-02-19T18:14:55.445+01:00</GENERATION_DATE>
@@ -11,18 +11,18 @@
         <DOCUMENT_CREATOR>
             <FIRST_NAME>Exporter</FIRST_NAME>
             <LAST_NAME>openQ-CAT</LAST_NAME>
-            <PHONE>+49.911.179</PHONE>
-            <ID_DB>nr:5446</ID_DB>
+            <PHONE></PHONE>
+            <ID_DB></ID_DB>
             <ADDRESS>
-                <NAME>IT-Systemhaus</NAME>
-                <STREET>Regensburgerstr. 104</STREET>
-                <ZIP>90478</ZIP>
-                <CITY>Nürnberg</CITY>
+                <NAME>cdemy GmbH</NAME>
+                <STREET>Richard-Roosenstraße 9</STREET>
+                <ZIP>34123</ZIP>
+                <CITY>Kassel</CITY>
                 <COUNTRY>DE</COUNTRY>
-                <URL>http://www.kursnet-online.arbeitsagentur.de</URL>
-                <ID_DB>adr:115</ID_DB>
+                <URL>https://cdemy.de/</URL>
+                <ID_DB></ID_DB>
             </ADDRESS>
-            <CONTACT_REMARKS>Eugen Riske</CONTACT_REMARKS>
+            <CONTACT_REMARKS>Andreas Höfer</CONTACT_REMARKS>
         </DOCUMENT_CREATOR>
         <RECIPIENT>
             <RECIPIENT_ID>BA</RECIPIENT_ID>
@@ -38,7 +38,7 @@
         </RECIPIENT>
         <SUPPLIER>
             <SUPPLIER_ID type="supplier_specific">274125</SUPPLIER_ID>
-            <SUPPLIER_NAME>cdemy GmbH Code Academy </SUPPLIER_NAME>
+            <SUPPLIER_NAME>cdemy GmbH Code Academy</SUPPLIER_NAME>
             <ADDRESS>
                 <NAME>cdemy GmbH</NAME>
                 <NAME2>Code Academy</NAME2>

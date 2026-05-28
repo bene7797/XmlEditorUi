@@ -11,8 +11,6 @@ public class MainForm : Form
     private readonly Button validateButton = new();
     private readonly Button addCourseButton = new();
     private readonly Button removeCourseButton = new();
-    private readonly Button refreshViewButton = new();
-
     private readonly ListBox courseList = new();
     private readonly PropertyGrid courseGrid = new();
     private readonly DataGridView quickFieldsGrid = new();
@@ -29,23 +27,19 @@ public class MainForm : Form
     private readonly TabPage headerTemplateTab = new("Header");
 
     private readonly ComboBox mainTemplateVariantCombo = new();
-    private readonly DataGridView mainTemplateGrid = UiFactory.CreateFieldGrid(50, 220);
+    private readonly DataGridView mainTemplateGrid = UiFactory.CreateFieldGrid(48, 220);
     private readonly DataGridView mainTemplateKeywordsGrid = new();
-    private readonly PropertyGrid mainTemplatePropertyGrid = UiFactory.CreatePropertyGrid(410, 220);
     private readonly Button saveMainTemplateButton = new();
 
     private readonly ComboBox courseTypeCombo = new();
-    private readonly DataGridView courseTypeQuickGrid = UiFactory.CreateFieldGrid(50);
-    private readonly PropertyGrid courseTypePropertyGrid = UiFactory.CreatePropertyGrid(300);
+    private readonly DataGridView courseTypeQuickGrid = UiFactory.CreateFieldGrid(48, 520);
     private readonly Button saveCourseTypeButton = new();
 
     private readonly ComboBox locationCombo = new();
-    private readonly DataGridView locationQuickGrid = UiFactory.CreateFieldGrid(50);
-    private readonly PropertyGrid locationPropertyGrid = UiFactory.CreatePropertyGrid(300);
+    private readonly DataGridView locationQuickGrid = UiFactory.CreateFieldGrid(48, 520);
     private readonly Button saveLocationButton = new();
 
-    private readonly DataGridView headerGrid = UiFactory.CreateFieldGrid(50);
-    private readonly PropertyGrid headerPropertyGrid = UiFactory.CreatePropertyGrid(300);
+    private readonly DataGridView headerGrid = UiFactory.CreateFieldGrid(48, 520);
     private readonly Button saveHeaderTemplateButton = new();
 
     private readonly TabControl statusTabs = new();
@@ -86,10 +80,10 @@ public class MainForm : Form
         serviceManager = new XmlServiceManager(servicesTemplateFolder, ImportantFields.List);
         profileManager = new TemplateProfileManager(profilesFolder);
 
-        mainTemplateBinder = new TemplateFieldGridBinder(this, mainTemplateTab, mainTemplateGrid, mainTemplatePropertyGrid);
-        courseTypeBinder = new TemplateFieldGridBinder(this, courseTypeTemplateTab, courseTypeQuickGrid, courseTypePropertyGrid);
-        locationBinder = new TemplateFieldGridBinder(this, locationTemplateTab, locationQuickGrid, locationPropertyGrid);
-        headerBinder = new TemplateFieldGridBinder(this, headerTemplateTab, headerGrid, headerPropertyGrid);
+        mainTemplateBinder = new TemplateFieldGridBinder(this, mainTemplateTab, mainTemplateGrid);
+        courseTypeBinder = new TemplateFieldGridBinder(this, courseTypeTemplateTab, courseTypeQuickGrid);
+        locationBinder = new TemplateFieldGridBinder(this, locationTemplateTab, locationQuickGrid);
+        headerBinder = new TemplateFieldGridBinder(this, headerTemplateTab, headerGrid);
 
         BuildServiceEditorTab();
         BuildTemplateEditorTab();
@@ -167,10 +161,6 @@ public class MainForm : Form
         removeCourseButton.SetBounds(590, 525, 130, 30);
         removeCourseButton.Click += RemoveCourse;
 
-        refreshViewButton.Text = "Ansicht aktualisieren";
-        refreshViewButton.SetBounds(1050, 525, 130, 30);
-        refreshViewButton.Click += (_, _) => RefreshCourseView();
-
         statusTabs.SetBounds(10, 610, 1140, 150);
         AddStatusTab("Neu hinzugefügt", newServicesList);
         AddStatusTab("Geändert / Update", updatedServicesList);
@@ -179,7 +169,7 @@ public class MainForm : Form
         serviceEditorTab.Controls.AddRange([
             openButton, exportButton, validateButton,
             courseList, quickFieldsLabel, quickFieldsGrid, courseGrid,
-            addCourseButton, removeCourseButton, refreshViewButton, statusTabs
+            addCourseButton, removeCourseButton, statusTabs
         ]);
     }
 
@@ -209,7 +199,7 @@ public class MainForm : Form
 
         var keywordsLabel = new Label
         {
-            Text = "Schlagwörter (KEYWORD) – eine Zeile pro Schlagwort:",
+            Text = "Keywords:",
             Left = 10,
             Top = 278,
             Width = 500,
@@ -235,18 +225,18 @@ public class MainForm : Form
 
         mainTemplateTab.Controls.AddRange([
             variantLabel, mainTemplateVariantCombo, saveMainTemplateButton,
-            mainTemplateGrid, keywordsLabel, mainTemplateKeywordsGrid, mainTemplatePropertyGrid
+            mainTemplateGrid, keywordsLabel, mainTemplateKeywordsGrid
         ]);
 
         BuildComboTemplateTab(
             courseTypeTemplateTab, "Beschäftigungsart:", courseTypeCombo, saveCourseTypeButton,
-            "Template speichern", courseTypeQuickGrid, courseTypePropertyGrid,
+            "Template speichern", courseTypeQuickGrid,
             LoadCourseTypeTemplate,
             () => courseTypeBinder.SaveDocument("Template gespeichert", ReloadCourseTypeTemplate));
 
         BuildComboTemplateTab(
             locationTemplateTab, "Ort:", locationCombo, saveLocationButton,
-            "Template speichern", locationQuickGrid, locationPropertyGrid,
+            "Template speichern", locationQuickGrid,
             LoadLocationTemplate,
             () => locationBinder.SaveDocument("Template gespeichert", ReloadLocationTemplate));
 
@@ -255,14 +245,14 @@ public class MainForm : Form
         saveHeaderTemplateButton.Click += (_, _) =>
             headerBinder.SaveDocument("Header gespeichert", LoadHeaderTemplate);
 
-        headerTemplateTab.Controls.AddRange([saveHeaderTemplateButton, headerGrid, headerPropertyGrid]);
+        headerTemplateTab.Controls.AddRange([saveHeaderTemplateButton, headerGrid]);
 
         templateEditorTab.Controls.Add(templateSubTabs);
     }
 
     private void BuildComboTemplateTab(
         TabPage tab, string labelText, ComboBox combo, Button saveButton, string saveText,
-        DataGridView grid, PropertyGrid propertyGrid,
+        DataGridView grid,
         EventHandler loadHandler, Action saveHandler)
     {
         var label = new Label { Text = labelText, Left = 10, Top = 15, Width = 120, Height = 20 };
@@ -274,7 +264,7 @@ public class MainForm : Form
         saveButton.SetBounds(350, 10, 150, 30);
         saveButton.Click += (_, _) => saveHandler();
 
-        tab.Controls.AddRange([label, combo, saveButton, grid, propertyGrid]);
+        tab.Controls.AddRange([label, combo, saveButton, grid]);
     }
 
     private void LoadAllTemplates()
@@ -310,12 +300,8 @@ public class MainForm : Form
             return;
         }
 
-        var fields = MainTemplateVariants.IsExternenpruefung(variant)
-            ? ExternenpruefungMainTemplateFields.EssentialFields
-            : MainTemplateFields.EssentialFields;
-
         mainTemplateBinder.BindSession(session);
-        mainTemplateBinder.LoadFields(session.Service, fields);
+        mainTemplateBinder.LoadFields(session.Service, MainTemplateFields.GetFieldsForService(session.Service));
         LoadMainTemplateKeywords(session.Service);
     }
 
