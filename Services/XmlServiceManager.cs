@@ -97,6 +97,7 @@ public class XmlServiceManager
 
         var newProductId = GenerateNewProductId();
         newService.SetChildText("PRODUCT_ID", newProductId);
+        SyncCourseIdWithProductId(newService);
 
         ApplyServiceModeForWorkingCopy(newService);
 
@@ -123,6 +124,7 @@ public class XmlServiceManager
 
         var newProductId = GenerateNewProductId();
         importedService.SetChildText("PRODUCT_ID", newProductId);
+        SyncCourseIdWithProductId(importedService);
 
         ApplyServiceModeForWorkingCopy(importedService);
 
@@ -150,6 +152,7 @@ public class XmlServiceManager
 
         var newProductId = GenerateNewProductId();
         importedService.SetChildText("PRODUCT_ID", newProductId);
+        SyncCourseIdWithProductId(importedService);
 
         ApplyServiceModeForWorkingCopy(importedService);
 
@@ -587,6 +590,24 @@ public class XmlServiceManager
         RemoveHeaderFromService(service);
         RemoveInvalidEducationExtendedInfoElements(service);
         NormalizeLocationEmailElements(service);
+        SyncCourseIdWithProductId(service);
+    }
+
+    private static void SyncCourseIdWithProductId(XmlNode service)
+    {
+        var education = service.GetNodeByPath("SERVICE_DETAILS/SERVICE_MODULE/EDUCATION");
+        if (education == null)
+            return;
+
+        var typeAttr = education.Attributes?["type"]?.Value;
+        if (!string.Equals(typeAttr, "true", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var productId = service.GetChildText("PRODUCT_ID");
+        if (string.IsNullOrWhiteSpace(productId))
+            return;
+
+        education.SetChildText("COURSE_ID", productId);
     }
 
     private static void RemoveHeaderFromService(XmlNode service)

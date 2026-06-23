@@ -9,8 +9,17 @@ public class TemplateConfigurationManager
     public void LoadMainTemplate(string templatePath) =>
         currentTemplate = XmlDocumentLoader.LoadFromFile(templatePath);
 
-    public void ApplyLocationConfiguration(LocationProfile location) =>
+    public void ApplyLocationConfiguration(LocationProfile location)
+    {
+        if (!location.Values.ContainsKey("ZIPBOX")
+            && location.Values.TryGetValue("ZIP", out var zip)
+            && !string.IsNullOrWhiteSpace(zip))
+        {
+            location.Values["ZIPBOX"] = zip;
+        }
+
         ApplyFieldMappings(TemplateFieldMapping.LocationFieldPaths, location.Values);
+    }
 
     public void ApplyCourseTypeConfiguration(CourseTypeProfile courseType)
     {

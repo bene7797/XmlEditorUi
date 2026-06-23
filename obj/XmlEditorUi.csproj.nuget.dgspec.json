@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\BenediktStoeck\\Desktop\\Cdemy Projekte\\Xml - csharp\\XmlEditorUi\\XmlEditorUi.csproj": {}
+    "c:\\Users\\BenediktStoeck\\Desktop\\Cdemy Projekte\\Xml - csharp\\XmlEditorUi\\XmlEditorUi.csproj": {}
   },
   "projects": {
-    "C:\\Users\\BenediktStoeck\\Desktop\\Cdemy Projekte\\Xml - csharp\\XmlEditorUi\\XmlEditorUi.csproj": {
+    "c:\\Users\\BenediktStoeck\\Desktop\\Cdemy Projekte\\Xml - csharp\\XmlEditorUi\\XmlEditorUi.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\BenediktStoeck\\Desktop\\Cdemy Projekte\\Xml - csharp\\XmlEditorUi\\XmlEditorUi.csproj",
+        "projectUniqueName": "c:\\Users\\BenediktStoeck\\Desktop\\Cdemy Projekte\\Xml - csharp\\XmlEditorUi\\XmlEditorUi.csproj",
         "projectName": "XmlEditorUi",
-        "projectPath": "C:\\Users\\BenediktStoeck\\Desktop\\Cdemy Projekte\\Xml - csharp\\XmlEditorUi\\XmlEditorUi.csproj",
+        "projectPath": "c:\\Users\\BenediktStoeck\\Desktop\\Cdemy Projekte\\Xml - csharp\\XmlEditorUi\\XmlEditorUi.csproj",
         "packagesPath": "C:\\Users\\BenediktStoeck\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\BenediktStoeck\\Desktop\\Cdemy Projekte\\Xml - csharp\\XmlEditorUi\\obj\\",
+        "outputPath": "c:\\Users\\BenediktStoeck\\Desktop\\Cdemy Projekte\\Xml - csharp\\XmlEditorUi\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\BenediktStoeck\\AppData\\Roaming\\NuGet\\NuGet.Config",
