@@ -88,7 +88,7 @@ public class TemplateProfileManager
 
     public List<CourseTypeProfile> LoadCourseTypes()
     {
-        var path = Path.Combine(profilesFolder, "courseTypes.xml");
+        var path = Path.Combine(profilesFolder, "coursetypes.xml");
         var result = new List<CourseTypeProfile>();
 
         if (!File.Exists(path))
@@ -124,7 +124,7 @@ public class TemplateProfileManager
 
     public void SaveCourseTypes(List<CourseTypeProfile> profiles)
     {
-        var path = Path.Combine(profilesFolder, "courseTypes.xml");
+        var path = Path.Combine(profilesFolder, "coursetypes.xml");
 
         var doc = new XmlDocument();
         var root = doc.CreateElement("COURSE_TYPES");

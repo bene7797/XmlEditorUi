@@ -242,8 +242,7 @@ public class MainForm : Form
 
         saveHeaderTemplateButton.Text = "Header speichern";
         saveHeaderTemplateButton.SetBounds(10, 10, 150, 30);
-        saveHeaderTemplateButton.Click += (_, _) =>
-            headerBinder.SaveDocument("Header gespeichert", LoadHeaderTemplate);
+        saveHeaderTemplateButton.Click += (_, _) => SaveSharedMainTemplate("Header gespeichert");
 
         headerTemplateTab.Controls.AddRange([saveHeaderTemplateButton, headerGrid]);
 
@@ -274,8 +273,6 @@ public class MainForm : Form
         else
             LoadMainTemplate();
 
-        LoadHeaderTemplate();
-
         FillCombo(courseTypeCombo, templateRepository.GetDistinctCourseTypeNames());
         FillCombo(locationCombo, templateRepository.GetDistinctLocationNames());
     }
@@ -300,9 +297,17 @@ public class MainForm : Form
             return;
         }
 
+        BindSharedMainTemplateSession(session);
+    }
+
+    private void BindSharedMainTemplateSession(TemplateDocumentSession session)
+    {
         mainTemplateBinder.BindSession(session);
         mainTemplateBinder.LoadFields(session.Service, MainTemplateFields.GetFieldsForService(session.Service));
         LoadMainTemplateKeywords(session.Service);
+
+        headerBinder.BindSession(session);
+        headerBinder.LoadFields(session.Document.DocumentElement!, HeaderTemplateFields.EssentialFields);
     }
 
     private void LoadMainTemplateKeywords(XmlNode service)
@@ -337,7 +342,9 @@ public class MainForm : Form
             "KEYWORD", keywords, insertAfterLocalName: "SERVICE_DATE", insertBeforeLocalName: "TARGET_GROUP");
     }
 
-    private void SaveMainTemplate()
+    private void SaveMainTemplate() => SaveSharedMainTemplate("Main Template gespeichert");
+
+    private void SaveSharedMainTemplate(string successMessage)
     {
         if (mainTemplateBinder.GetSession() is not { } session)
         {
@@ -349,8 +356,8 @@ public class MainForm : Form
         {
             ApplyMainTemplateKeywords();
             session.Save();
-            MessageBox.Show("Main Template gespeichert");
-            LoadMainTemplate();
+            MessageBox.Show(successMessage);
+            BindSharedMainTemplateSession(session);
         }
         catch (Exception ex)
         {
@@ -391,19 +398,6 @@ public class MainForm : Form
 
         locationBinder.BindSession(session);
         locationBinder.LoadFields(session.Service, LocationTemplateFields.EssentialFields);
-    }
-
-    private void LoadHeaderTemplate()
-    {
-        var session = templateRepository.LoadMainTemplateSession();
-        if (session == null)
-        {
-            MessageBox.Show("Main.xml nicht gefunden");
-            return;
-        }
-
-        headerBinder.BindSession(session);
-        headerBinder.LoadFields(session.Document.DocumentElement!, HeaderTemplateFields.EssentialFields);
     }
 
     private void AddStatusTab(string title, ListBox listBox)

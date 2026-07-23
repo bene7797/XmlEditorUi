@@ -89,7 +89,7 @@ Das Bildungsangebot beinhaltet in Vollzeit 110 und in Teilzeit 180 Tage Praktiku
                         <EXTENDED_INFO>
                             <INSTITUTION type="102">Berufsbildende Schule/Einrichtung</INSTITUTION>
                             <INSTRUCTION_FORM type="101">Präsenzunterricht</INSTRUCTION_FORM>
-                            <INSTRUCTION_TIME type="1">Teilzeit</INSTRUCTION_TIME>
+                            <INSTRUCTION_TIME type="2">Teilzeit</INSTRUCTION_TIME>
                             <FUNDING_TYPES_FEDERAL type="2">Bildungsgutschein</FUNDING_TYPES_FEDERAL>
                             <FUNDING_TYPES_FEDERAL type="5">Weiterbildungsstipendium bei der Stiftung Begabtenförderung berufliche Bildung (SBB)</FUNDING_TYPES_FEDERAL>
                             <FUNDING_TYPES_FEDERAL type="12">Arbeitslosengeld bei beruflicher Weiterbildung</FUNDING_TYPES_FEDERAL>
@@ -113,7 +113,7 @@ Das Bildungsangebot beinhaltet in Vollzeit 110 und in Teilzeit 180 Tage Praktiku
                                 <STATE>Hessen</STATE>
                                 <COUNTRY>deutschland</COUNTRY>
                                 <PHONE>+49.561.98808660</PHONE>
-                                <MOBILE>+49.157.86967671</MOBILE>
+                                <MOBILE>+49.1578.6897671</MOBILE>
                                 <FAX />
                                 <EMAILS>
                                     <EMAIL>info@cdemy.de</EMAIL>

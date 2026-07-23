@@ -57,7 +57,7 @@ public sealed class TemplateFieldGridBinder
             var rowIndex = _grid.Rows.Add(field.Label, FieldValueFormatter.ForGridDisplay(raw, field.Path));
             var row = _grid.Rows[rowIndex];
             row.Tag = field.Path;
-            row.Cells["Value"].ReadOnly = !DateFieldHelper.IsDatePath(field.Path);
+            row.Cells["Value"].ReadOnly = DateFieldHelper.IsDatePath(field.Path);
         }
 
         if (_propertyGrid != null)

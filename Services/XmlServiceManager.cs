@@ -263,14 +263,11 @@ public class XmlServiceManager
 
     /// <summary>
     /// XSD: OPENQCAT enthält entweder NEW_CATALOG oder UPDATE_CATALOG (xsd:choice).
-    /// UPDATE_CATALOG bei Änderungen an einem bestehenden Katalog (neu/geändert/gelöscht).
+    /// UPDATE_CATALOG nur bei tatsächlichen Änderungen (neu/geändert/gelöscht).
     /// </summary>
     private bool ShouldUseUpdateCatalogExport()
     {
         if (deletedServices.Count > 0)
-            return true;
-
-        if (GetUpdateCatalogNode() != null)
             return true;
 
         return serviceStates.Values.Any(s => s is ServiceState.New or ServiceState.Updated);

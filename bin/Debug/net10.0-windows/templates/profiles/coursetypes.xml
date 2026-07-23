@@ -2,9 +2,11 @@
     <COURSE_TYPE_PROFILE name="Vollzeit">
         <INSTRUCTION_TIME type="1">Vollzeit</INSTRUCTION_TIME>
         <DURATION type="7" />
+        <INSTRUCTION_REMARKS>Montag bis Freitag 8,5 Stunden (inkl. Mittagspause) pro Tag in individueller Gleitzeit, aber mit einer Pflicht-Kernzeit von 09:30 Uhr bis 16:30 Uhr.</INSTRUCTION_REMARKS>
     </COURSE_TYPE_PROFILE>
     <COURSE_TYPE_PROFILE name="Teilzeit">
         <INSTRUCTION_TIME type="2">Teilzeit</INSTRUCTION_TIME>
         <DURATION type="8" />
+        <INSTRUCTION_REMARKS>Montag bis Freitag 5,5 Stunden pro Tag in individueller Gleitzeit, aber mit einer Pflicht-Kernzeit von 09:30 Uhr bis 13:30 Uhr.</INSTRUCTION_REMARKS>
     </COURSE_TYPE_PROFILE>
 </COURSE_TYPES>
