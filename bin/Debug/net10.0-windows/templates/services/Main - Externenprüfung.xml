@@ -11,7 +11,7 @@
         <DOCUMENT_CREATOR>
             <FIRST_NAME>Exporter</FIRST_NAME>
             <LAST_NAME>openQ-CAT</LAST_NAME>
-            <PHONE>+49.911.1790</PHONE>
+            <PHONE>+49.911.179</PHONE>
             <ID_DB>nr:5446</ID_DB>
             <ADDRESS>
                 <NAME>IT-Systemhaus</NAME>
@@ -70,6 +70,15 @@
                 <ID_DB>1148177</ID_DB>
                 <CONTACT_REMARKS>Leiter Unternehmensentwicklung</CONTACT_REMARKS>
             </CONTACT>
+            <KEYWORD>Academy</KEYWORD>
+            <KEYWORD>cdemy GmbH Code Academy</KEYWORD>
+            <KEYWORD>Code</KEYWORD>
+            <KEYWORD>GmbH</KEYWORD>
+            <EXTENDED_INFO input_type="0">
+                <INSTITUTION_NUMBER>274125</INSTITUTION_NUMBER>
+                <ORGANIZATIONAL_FORM type="2">Private Bildungseinrichtung</ORGANIZATIONAL_FORM>
+                <STANDARD_COMPANY_NUMBER>80028298</STANDARD_COMPANY_NUMBER>
+            </EXTENDED_INFO>
         </SUPPLIER>
     </HEADER>
     <PRODUCT_ID>375057138</PRODUCT_ID>

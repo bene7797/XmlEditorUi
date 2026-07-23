@@ -8,16 +8,16 @@
     "net10.0-windows7.0": []
   },
   "packageFolders": {
-    "C:\\Users\\BenediktStoeck\\.nuget\\packages\\": {}
+    "C:\\Users\\BenediktStoeck\\AppData\\Local\\Temp\\cursor-sandbox-cache\\3df48594e714f926b85e640db1eb9c60\\nuget": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\BenediktStoeck\\Desktop\\Cdemy Projekte\\Xml - csharp\\XmlEditorUi\\XmlEditorUi.csproj",
+      "projectUniqueName": "c:\\Users\\BenediktStoeck\\Desktop\\Cdemy Projekte\\Xml - csharp\\XmlEditorUi\\XmlEditorUi.csproj",
       "projectName": "XmlEditorUi",
-      "projectPath": "C:\\Users\\BenediktStoeck\\Desktop\\Cdemy Projekte\\Xml - csharp\\XmlEditorUi\\XmlEditorUi.csproj",
-      "packagesPath": "C:\\Users\\BenediktStoeck\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\BenediktStoeck\\Desktop\\Cdemy Projekte\\Xml - csharp\\XmlEditorUi\\obj\\",
+      "projectPath": "c:\\Users\\BenediktStoeck\\Desktop\\Cdemy Projekte\\Xml - csharp\\XmlEditorUi\\XmlEditorUi.csproj",
+      "packagesPath": "C:\\Users\\BenediktStoeck\\AppData\\Local\\Temp\\cursor-sandbox-cache\\3df48594e714f926b85e640db1eb9c60\\nuget",
+      "outputPath": "c:\\Users\\BenediktStoeck\\Desktop\\Cdemy Projekte\\Xml - csharp\\XmlEditorUi\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\BenediktStoeck\\AppData\\Roaming\\NuGet\\NuGet.Config",

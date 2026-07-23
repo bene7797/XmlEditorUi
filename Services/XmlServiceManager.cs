@@ -403,7 +403,7 @@ public class XmlServiceManager
         AppendExportHeader(exportDoc, root);
 
         var catalog = exportDoc.CreateElement("NEW_CATALOG");
-        catalog.SetAttribute("FULLCATALOG", "1");
+        catalog.SetAttribute("FULLCATALOG", "true");
         root.AppendChild(catalog);
 
         var services = GetActiveServices();

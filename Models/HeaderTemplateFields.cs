@@ -53,5 +53,10 @@ public static class HeaderTemplateFields
         new("Supplier Contact URL", "HEADER/SUPPLIER/CONTACT/URL"),
         new("Supplier Contact ID", "HEADER/SUPPLIER/CONTACT/ID_DB"),
         new("Supplier Contact Remarks", "HEADER/SUPPLIER/CONTACT/CONTACT_REMARKS"),
+        new("Supplier Extended Info Input Type", "HEADER/SUPPLIER/EXTENDED_INFO@input_type"),
+        new("Supplier Institution Number", "HEADER/SUPPLIER/EXTENDED_INFO/INSTITUTION_NUMBER"),
+        new("Supplier Organizational Form", "HEADER/SUPPLIER/EXTENDED_INFO/ORGANIZATIONAL_FORM"),
+        new("Supplier Organizational Form Type", "HEADER/SUPPLIER/EXTENDED_INFO/ORGANIZATIONAL_FORM@type"),
+        new("Supplier Standard Company Number", "HEADER/SUPPLIER/EXTENDED_INFO/STANDARD_COMPANY_NUMBER"),
     ];
 }
