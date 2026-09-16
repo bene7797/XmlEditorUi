@@ -1,0 +1,27 @@
+# WinForms / .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# Flutter
+flutter/.dart_tool/
+flutter/.flutter-plugins
+flutter/.flutter-plugins-dependencies
+flutter/.packages
+flutter/build/
+flutter/windows/flutter/ephemeral/
+flutter/.idea/
+flutter/*.iml
+
+# NativeAOT (Source wird getrackt, Build-Outputs nicht)
+native/bin/
+native/obj/
+native/publish/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

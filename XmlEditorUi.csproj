@@ -5,6 +5,8 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Flutter- und Native-Ordner gehören nicht zum WinForms-Build -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);flutter\**;native\**</DefaultItemExcludes>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Schema\schema.cs" />
