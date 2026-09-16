@@ -168,6 +168,39 @@ public class XmlServiceManager
         return importedService;
     }
 
+    /// <summary>
+    /// Klont einen bestehenden SERVICE, vergibt eine neue PRODUCT_ID und überschreibt Ort
+    /// sowie optional Beschäftigungsart (Vollzeit/Teilzeit).
+    /// </summary>
+    public XmlNode CopyServiceWithConfiguration(
+        XmlNode sourceService,
+        LocationProfile location,
+        CourseTypeProfile? courseType)
+    {
+        EnsureDocumentLoaded();
+
+        var insertParent = GetServiceInsertParent();
+        if (insertParent == null)
+            throw new InvalidOperationException("Weder NEW_CATALOG noch UPDATE_CATALOG gefunden.");
+
+        var copiedService = sourceService.CloneNode(deep: true);
+
+        var newProductId = GenerateNewProductId();
+        copiedService.SetChildText("PRODUCT_ID", newProductId);
+        SyncCourseIdWithProductId(copiedService);
+        ApplyServiceModeForWorkingCopy(copiedService);
+
+        TemplateConfigurationManager.ApplyLocationToService(copiedService, location);
+        if (courseType != null)
+            TemplateConfigurationManager.ApplyCourseTypeToService(copiedService, courseType);
+
+        insertParent.AppendChild(copiedService);
+        serviceStates[copiedService] = ServiceState.New;
+        pendingTemplateFields[copiedService] = importantFields.Select(f => f.Path).ToHashSet();
+
+        return copiedService;
+    }
+
     public void RemoveService(XmlNode service, string title)
     {
         EnsureDocumentLoaded();

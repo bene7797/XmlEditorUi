@@ -10,6 +10,7 @@ public class MainForm : Form
     private readonly Button exportButton = new();
     private readonly Button validateButton = new();
     private readonly Button addCourseButton = new();
+    private readonly Button copyWithButton = new();
     private readonly Button removeCourseButton = new();
     private readonly ListBox courseList = new();
     private readonly PropertyGrid courseGrid = new();
@@ -157,8 +158,12 @@ public class MainForm : Form
         addCourseButton.SetBounds(450, 525, 130, 30);
         addCourseButton.Click += AddCourseFromTemplate;
 
+        copyWithButton.Text = "Kopieren mit…";
+        copyWithButton.SetBounds(590, 525, 130, 30);
+        copyWithButton.Click += CopyCourseWithConfiguration;
+
         removeCourseButton.Text = "Service Löschen";
-        removeCourseButton.SetBounds(590, 525, 130, 30);
+        removeCourseButton.SetBounds(730, 525, 130, 30);
         removeCourseButton.Click += RemoveCourse;
 
         statusTabs.SetBounds(10, 610, 1140, 150);
@@ -169,7 +174,7 @@ public class MainForm : Form
         serviceEditorTab.Controls.AddRange([
             openButton, exportButton, validateButton,
             courseList, quickFieldsLabel, quickFieldsGrid, courseGrid,
-            addCourseButton, removeCourseButton, statusTabs
+            addCourseButton, copyWithButton, removeCourseButton, statusTabs
         ]);
     }
 
@@ -419,13 +424,18 @@ public class MainForm : Form
         RefreshStatusLists();
     }
 
-    private void LoadCourses()
+    private void LoadCourses(XmlNode? selectNode = null)
     {
+        var nodeToSelect = selectNode;
         courseList.Items.Clear();
         courseGrid.SelectedObject = null;
         selectedCourse = null;
 
-        var services = serviceManager.GetServiceNodes().ToList();
+        var services = serviceManager.GetServiceNodes()
+            .OrderBy(DateFieldHelper.GetCourseStartDateOrMax)
+            .ThenBy(s => s.GetChildText("PRODUCT_ID") ?? string.Empty)
+            .ToList();
+
         if (services.Count == 0)
         {
             MessageBox.Show("XML geladen, aber keine SERVICE-Einträge außerhalb von DELETE gefunden.");
@@ -438,6 +448,26 @@ public class MainForm : Form
             courseList.Items.Add(new CourseListItem(
                 services[i], ServiceTitleBuilder.Build(services[i], i, state)));
         }
+
+        if (nodeToSelect == null)
+            return;
+
+        for (int i = 0; i < courseList.Items.Count; i++)
+        {
+            if (courseList.Items[i] is CourseListItem item && ReferenceEquals(item.Node, nodeToSelect))
+            {
+                courseList.SelectedIndex = i;
+                break;
+            }
+        }
+    }
+
+    private void ApplyCourseStartSideEffects(XmlNode service, string? courseStartValue = null)
+    {
+        foreach (var path in DateFieldHelper.ApplyCourseStartDefaults(service, courseStartValue))
+            serviceManager.MarkFieldAsChanged(service, path);
+
+        LoadCourses(service);
     }
 
     private void LoadQuickFields()
@@ -476,6 +506,10 @@ public class MainForm : Form
         if (row.Tag is not string path)
             return;
 
+        // Datumsfelder werden ausschließlich über den Datepicker (CellClick) gesetzt.
+        if (DateFieldHelper.IsDatePath(path))
+            return;
+
         var newValue = row.Cells[1].Value?.ToString() ?? string.Empty;
         selectedCourse.SetNodeByPath(path, newValue);
         serviceManager.MarkFieldAsChanged(selectedCourse, path);
@@ -503,6 +537,13 @@ public class MainForm : Form
         row.Cells[1].Value = formatted;
         selectedCourse.SetNodeByPath(path, formatted);
         serviceManager.MarkFieldAsChanged(selectedCourse, path);
+
+        if (DateFieldHelper.IsCourseStartPath(path))
+        {
+            ApplyCourseStartSideEffects(selectedCourse, formatted);
+            return;
+        }
+
         ApplyQuickFieldColor(row, selectedCourse, path);
         RefreshCourseView();
     }
@@ -519,8 +560,17 @@ public class MainForm : Form
 
     private void CourseGrid_PropertyValueChanged(object? s, PropertyValueChangedEventArgs e)
     {
-        if (selectedCourse != null)
-            serviceManager.MarkAsUpdated(selectedCourse);
+        if (selectedCourse == null)
+            return;
+
+        serviceManager.MarkAsUpdated(selectedCourse);
+
+        var propName = e.ChangedItem?.PropertyDescriptor?.Name;
+        if (DateFieldHelper.IsCourseStartPath(propName))
+        {
+            ApplyCourseStartSideEffects(selectedCourse);
+            return;
+        }
 
         RefreshCourseView();
     }
@@ -634,6 +684,57 @@ public class MainForm : Form
         catch (Exception ex)
         {
             MessageBox.Show($"Fehler beim Erstellen des Services: {ex.Message}");
+        }
+    }
+
+    private void CopyCourseWithConfiguration(object? sender, EventArgs e)
+    {
+        if (serviceManager.Document == null)
+        {
+            MessageBox.Show("Bitte zuerst XML öffnen.");
+            return;
+        }
+
+        if (selectedCourse == null)
+        {
+            MessageBox.Show("Bitte Service auswählen, der kopiert werden soll.");
+            return;
+        }
+
+        var locations = profileManager.LoadLocations();
+        var courseTypes = profileManager.LoadCourseTypes()
+            .Where(c => !c.Name.Contains("Extern", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (locations.Count == 0)
+        {
+            MessageBox.Show("Orte nicht konfiguriert.");
+            return;
+        }
+
+        using var configForm = new CopyWithConfigurationForm(locations, courseTypes, selectedCourse);
+        if (configForm.ShowDialog() != DialogResult.OK || configForm.SelectedLocation == null)
+            return;
+
+        try
+        {
+            serviceManager.CopyServiceWithConfiguration(
+                selectedCourse,
+                configForm.SelectedLocation,
+                configForm.SelectedCourseType);
+
+            LoadCourses();
+            courseList.SelectedIndex = courseList.Items.Count - 1;
+            RefreshStatusLists();
+
+            var typeInfo = configForm.SelectedCourseType?.Name ?? "unverändert";
+            MessageBox.Show(
+                $"Kopie erstellt für {configForm.SelectedLocation.Name} ({typeInfo}).\n" +
+                "Bitte variable Daten (z. B. Datum, Preis) anpassen.");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Fehler beim Kopieren: {ex.Message}");
         }
     }
 

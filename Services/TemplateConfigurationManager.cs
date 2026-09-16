@@ -11,6 +11,18 @@ public class TemplateConfigurationManager
 
     public void ApplyLocationConfiguration(LocationProfile location)
     {
+        EnsureLoaded();
+        ApplyLocationToService(currentTemplate!.DocumentElement!, location);
+    }
+
+    public void ApplyCourseTypeConfiguration(CourseTypeProfile courseType)
+    {
+        EnsureLoaded();
+        ApplyCourseTypeToService(currentTemplate!.DocumentElement!, courseType);
+    }
+
+    public static void ApplyLocationToService(XmlNode service, LocationProfile location)
+    {
         if (!location.Values.ContainsKey("ZIPBOX")
             && location.Values.TryGetValue("ZIP", out var zip)
             && !string.IsNullOrWhiteSpace(zip))
@@ -18,14 +30,11 @@ public class TemplateConfigurationManager
             location.Values["ZIPBOX"] = zip;
         }
 
-        ApplyFieldMappings(TemplateFieldMapping.LocationFieldPaths, location.Values);
+        ApplyFieldMappings(service, TemplateFieldMapping.LocationFieldPaths, location.Values);
     }
 
-    public void ApplyCourseTypeConfiguration(CourseTypeProfile courseType)
+    public static void ApplyCourseTypeToService(XmlNode service, CourseTypeProfile courseType)
     {
-        EnsureLoaded();
-        var service = currentTemplate!.DocumentElement!;
-
         foreach (var mapping in TemplateFieldMapping.CourseTypeFieldPaths)
         {
             if (!courseType.Values.TryGetValue(mapping.Key, out var value))
@@ -50,14 +59,15 @@ public class TemplateConfigurationManager
         return currentTemplate!;
     }
 
-    private void ApplyFieldMappings(Dictionary<string, string> mappings, Dictionary<string, string> values)
+    private static void ApplyFieldMappings(
+        XmlNode service,
+        Dictionary<string, string> mappings,
+        Dictionary<string, string> values)
     {
-        EnsureLoaded();
-
         foreach (var mapping in mappings)
         {
             if (values.TryGetValue(mapping.Key, out var value))
-                currentTemplate!.DocumentElement!.SetNodeByPath(mapping.Value, value);
+                service.SetNodeByPath(mapping.Value, value);
         }
     }
 

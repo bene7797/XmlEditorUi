@@ -8,26 +8,24 @@
     "net10.0-windows7.0": []
   },
   "packageFolders": {
-    "C:\\Users\\BenediktStoeck\\AppData\\Local\\Temp\\cursor-sandbox-cache\\3df48594e714f926b85e640db1eb9c60\\nuget": {}
+    "C:\\Users\\bened\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "c:\\Users\\BenediktStoeck\\Desktop\\Cdemy Projekte\\Xml - csharp\\XmlEditorUi\\XmlEditorUi.csproj",
+      "projectUniqueName": "C:\\Users\\bened\\Desktop\\CDemy\\xml\\XmlEditorUi\\XmlEditorUi.csproj",
       "projectName": "XmlEditorUi",
-      "projectPath": "c:\\Users\\BenediktStoeck\\Desktop\\Cdemy Projekte\\Xml - csharp\\XmlEditorUi\\XmlEditorUi.csproj",
-      "packagesPath": "C:\\Users\\BenediktStoeck\\AppData\\Local\\Temp\\cursor-sandbox-cache\\3df48594e714f926b85e640db1eb9c60\\nuget",
-      "outputPath": "c:\\Users\\BenediktStoeck\\Desktop\\Cdemy Projekte\\Xml - csharp\\XmlEditorUi\\obj\\",
+      "projectPath": "C:\\Users\\bened\\Desktop\\CDemy\\xml\\XmlEditorUi\\XmlEditorUi.csproj",
+      "packagesPath": "C:\\Users\\bened\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\bened\\Desktop\\CDemy\\xml\\XmlEditorUi\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\Users\\BenediktStoeck\\AppData\\Roaming\\NuGet\\NuGet.Config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        "C:\\Users\\bened\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net10.0-windows"
       ],
       "sources": {
-        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
