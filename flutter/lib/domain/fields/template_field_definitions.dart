@@ -31,6 +31,10 @@ class LocationTemplateFields {
       'SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/STATE',
     ),
     TemplateFieldDefinition(
+      'Land',
+      'SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/COUNTRY',
+    ),
+    TemplateFieldDefinition(
       'Telefon',
       'SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/PHONE',
     ),
@@ -68,6 +72,10 @@ class CourseTypeTemplateFields {
       'SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/INSTRUCTION_REMARKS',
     ),
     TemplateFieldDefinition('Course Type', 'COURSE_TYPE'),
+    TemplateFieldDefinition(
+      'Education (Angebot/Termin)',
+      'SERVICE_DETAILS/SERVICE_MODULE/EDUCATION@type',
+    ),
     TemplateFieldDefinition(
       'Education Type',
       'SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/EXTENDED_INFO/EDUCATION_TYPE',
@@ -203,6 +211,10 @@ class HeaderTemplateFields {
     TemplateFieldDefinition(
       'Supplier Contact Role',
       'HEADER/SUPPLIER/CONTACT/CONTACT_ROLE',
+    ),
+    TemplateFieldDefinition(
+      'Supplier Contact Role (type)',
+      'HEADER/SUPPLIER/CONTACT/CONTACT_ROLE@type',
     ),
     TemplateFieldDefinition(
       'Supplier Contact Salutation',

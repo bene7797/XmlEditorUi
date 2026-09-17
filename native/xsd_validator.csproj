@@ -6,7 +6,11 @@
     <Nullable>enable</Nullable>
     <PublishAot>true</PublishAot>
     <NativeLib>Shared</NativeLib>
-    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Needed for OpenQCat XML with encoding="iso-8859-15" -->
+    <InvariantGlobalization>false</InvariantGlobalization>
     <AssemblyName>xsd_validator</AssemblyName>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="9.0.0" />
+  </ItemGroup>
 </Project>

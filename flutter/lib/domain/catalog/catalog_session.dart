@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
 import 'package:xml/xml.dart';
 
 import '../../data/xml/xml_file_io.dart';
 import '../../data/xml/xml_path.dart';
 import '../fields/important_fields.dart';
+import '../kursnet/kursnet_rules.dart';
 import '../templates/template_configurator.dart';
 import 'models.dart';
 
@@ -140,6 +142,61 @@ class CatalogSession {
     serviceStates[copied] = ServiceState.neu;
     pendingTemplateFields[copied] =
         importantFields.map((f) => f.path).toSet();
+    return copied;
+  }
+
+  static bool isAngebot(XmlElement service) {
+    final education = XmlPath.getNodeByPath(
+      service,
+      'SERVICE_DETAILS/SERVICE_MODULE/EDUCATION',
+    );
+    return (education?.getAttribute('type') ?? 'true').toLowerCase() == 'true';
+  }
+
+  static String? educationCourseId(XmlElement service) => XmlPath.getTextByPath(
+        service,
+        'SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/COURSE_ID',
+      );
+
+  XmlElement addVeranstaltungFrom(XmlElement source) {
+    _ensureLoaded();
+    final insertParent = _getServiceInsertParent();
+    if (insertParent == null) {
+      throw StateError('Weder NEW_CATALOG noch UPDATE_CATALOG gefunden.');
+    }
+
+    final parentProductId = isAngebot(source)
+        ? (XmlPath.getChildText(source, 'PRODUCT_ID') ?? '')
+        : (educationCourseId(source) ?? '');
+    if (parentProductId.trim().isEmpty) {
+      throw StateError(
+        'Kein Bildungsangebot gefunden, dem die Veranstaltung zugeordnet werden kann.',
+      );
+    }
+
+    final copied = source.copy();
+    final newProductId = generateNewProductId();
+    XmlPath.setChildText(copied, 'PRODUCT_ID', newProductId);
+
+    final education = XmlPath.getNodeByPath(
+      copied,
+      'SERVICE_DETAILS/SERVICE_MODULE/EDUCATION',
+    );
+    if (education == null) {
+      throw StateError('SERVICE hat kein EDUCATION-Element.');
+    }
+    education.setAttribute('type', 'false');
+    XmlPath.setChildText(education, 'COURSE_ID', parentProductId);
+    _applyServiceModeForWorkingCopy(copied);
+
+    insertParent.children.add(copied);
+    serviceStates[copied] = ServiceState.neu;
+    pendingTemplateFields[copied] = {
+      'SERVICE_DETAILS/SERVICE_DATE/START_DATE',
+      'SERVICE_DETAILS/SERVICE_DATE/END_DATE',
+      'SERVICE_DETAILS/ANNOUNCEMENT/START_DATE',
+      'SERVICE_DETAILS/ANNOUNCEMENT/END_DATE',
+    };
     return copied;
   }
 
@@ -355,8 +412,97 @@ class CatalogSession {
   void _appendExportHeader(XmlDocument exportDoc, XmlElement root) {
     if (headerTemplate == null) return;
     final importedHeader = headerTemplate!.copy();
+    _ensureSupplierRequiredContent(importedHeader);
+    KursnetRules.sanitizeHeader(importedHeader);
     _applyExportGenerationDate(importedHeader);
+    // Keep the in-memory header in sync so re-exports stay complete.
+    headerTemplate = importedHeader.copy();
     root.children.insert(0, importedHeader);
+  }
+
+  /// XSD requires SUPPLIER/EXTENDED_INFO (minOccurs=1). Incomplete headers
+  /// from older exports or stale AppData templates are enriched from Main.xml.
+  void _ensureSupplierRequiredContent(XmlElement header) {
+    final supplier = header.childElements.cast<XmlElement?>().firstWhere(
+          (n) => n!.name.local.toLowerCase() == 'supplier',
+          orElse: () => null,
+        );
+    if (supplier == null) return;
+
+    final hasExtendedInfo = supplier.childElements.any(
+      (n) => n.name.local.toLowerCase() == 'extended_info',
+    );
+    final hasKeyword = supplier.childElements.any(
+      (n) => n.name.local.toLowerCase() == 'keyword',
+    );
+    if (hasExtendedInfo && hasKeyword) return;
+
+    final templateSupplier = _loadMainTemplateSupplier();
+    if (templateSupplier != null) {
+      if (!hasKeyword) {
+        for (final keyword in templateSupplier.childElements.where(
+          (n) => n.name.local.toLowerCase() == 'keyword',
+        )) {
+          supplier.children.add(keyword.copy());
+        }
+      }
+      if (!hasExtendedInfo) {
+        final extended = templateSupplier.childElements.cast<XmlElement?>().firstWhere(
+              (n) => n!.name.local.toLowerCase() == 'extended_info',
+              orElse: () => null,
+            );
+        if (extended != null) {
+          supplier.children.add(extended.copy());
+          return;
+        }
+      } else {
+        return;
+      }
+    }
+
+    if (hasExtendedInfo) return;
+
+    final supplierId =
+        XmlPath.getChildText(supplier, 'SUPPLIER_ID')?.trim() ?? '';
+    supplier.children.add(
+      XmlElement(
+        XmlName('EXTENDED_INFO'),
+        [XmlAttribute(XmlName('input_type'), '0')],
+        [
+          if (supplierId.isNotEmpty)
+            XmlElement(
+              XmlName('INSTITUTION_NUMBER'),
+              [],
+              [XmlText(supplierId)],
+            ),
+          XmlElement(
+            XmlName('ORGANIZATIONAL_FORM'),
+            [XmlAttribute(XmlName('type'), '2')],
+            [XmlText('Private Bildungseinrichtung')],
+          ),
+        ],
+      ),
+    );
+  }
+
+  XmlElement? _loadMainTemplateSupplier() {
+    final file = File(p.join(servicesTemplateFolder, 'Main.xml'));
+    if (!file.existsSync()) return null;
+    try {
+      final doc = XmlDocument.parse(file.readAsStringSync());
+      final service = doc.rootElement;
+      final header = service.childElements.cast<XmlElement?>().firstWhere(
+            (n) => n!.name.local.toLowerCase() == 'header',
+            orElse: () => null,
+          );
+      if (header == null) return null;
+      return header.childElements.cast<XmlElement?>().firstWhere(
+            (n) => n!.name.local.toLowerCase() == 'supplier',
+            orElse: () => null,
+          );
+    } catch (_) {
+      return null;
+    }
   }
 
   void _applyExportGenerationDate(XmlElement header) {
@@ -415,6 +561,7 @@ class CatalogSession {
     _removeInvalidEducationExtendedInfoElements(service);
     _normalizeLocationEmailElements(service);
     _syncCourseIdWithProductId(service);
+    KursnetRules.sanitizeService(service);
   }
 
   void _syncCourseIdWithProductId(XmlElement service) {

@@ -26,6 +26,8 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/schema.xsd
-    - assets/templates/profiles/
-    - assets/templates/services/
+    - assets/openqcat/schema.xsd
+    - assets/openqcat/templates/profiles/
+    - assets/openqcat/templates/services/
+    - assets/openqcat/reference/
+    - assets/openqcat/reference/wertebereiche/

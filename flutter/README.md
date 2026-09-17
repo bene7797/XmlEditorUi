@@ -1,31 +1,56 @@
 # Flutter XML Service Editor
 
-Flutter/Windows-Port des WinForms-Editors im Repo-Root. Original und Flutter sind unabhängig startbar.
+Aktueller OpenQCat-/KURSNET-Editor (Windows). Überblick und Schnellstart: [README im Repo-Root](../README.md).
 
 ## Start
 
-```bash
+```powershell
 cd flutter
 flutter pub get
 flutter run -d windows
 ```
 
-Beim ersten Start werden `schema.xsd` und `templates/**` nach
-`%LocalAppData%/…/XmlEditorFlutter/` kopiert (beschreibbar für den Vorlagen-Editor).
+Erststart kopiert Schema, Vorlagen und Wertebereiche nach Application Support, Ordner `XmlEditorFlutter`.
 
-## XSD-Validator (FFI)
+Vorlagen dort editieren — nicht die Assets, außer die Änderung soll für alle Neuinstallationen gelten (`assets/openqcat/templates/`).
 
-```bash
+## XSD-Validator
+
+```powershell
 cd ../native
 dotnet publish -c Release -r win-x64 -o publish
 copy publish\xsd_validator.dll ..\flutter\native\xsd_validator.dll
 ```
 
-Ohne DLL funktioniert der Editor weiterhin; nur „Gegen XSD prüfen“ meldet dann einen Fehler.
+Ohne DLL: Editor ok, Button „Gegen XSD prüfen“ meldet den fehlenden Pfad.
 
-## Struktur
+Falls der Windows-Build `ProgramFiles(x86)` vermisst: Variable setzen oder `.vscode/launch.json` nutzen.
 
-- `lib/domain/` — Katalog-/XML-Regeln (1:1-Port)
-- `lib/data/` — Datei-IO, Profiles, Asset-Seed
-- `lib/ui/` — Flutter-Oberfläche
-- `lib/ffi/` — Binding zu `xsd_validator.dll`
+## Assets
+
+Unter `assets/openqcat/`:
+
+| Pfad | Inhalt |
+|------|--------|
+| `schema.xsd` | OpenQCat 1.1 |
+| `templates/services/` | Main + Ort/Beschäftigungsart |
+| `templates/profiles/` | `locations.xml`, `coursetypes.xml` |
+| `reference/*.csv` | Orte, Systematik, Zertifizierer |
+| `reference/wertebereiche/*.dat` | BA-Codes (`id\|label`) |
+
+Einträge in `pubspec.yaml` und `AppDataStore` synchron halten.
+
+## Code
+
+Siehe [docs/WARTUNG.md](../docs/WARTUNG.md). Kurz:
+
+- `lib/app/` — `EditorController`
+- `lib/domain/` — Katalog, Regeln, Mappings
+- `lib/data/` — IO, SOAP, Referenz
+- `lib/ui/` — nur Darstellung
+- `lib/ffi/` — XSD-DLL
+
+```powershell
+dart analyze lib
+flutter test
+```

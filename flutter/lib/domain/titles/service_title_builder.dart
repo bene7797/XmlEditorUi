@@ -1,15 +1,18 @@
 import 'package:xml/xml.dart';
 
 import '../../data/xml/xml_path.dart';
+import '../catalog/catalog_session.dart';
 import '../catalog/models.dart';
 
 class ServiceTitleBuilder {
   static String build(XmlElement service, int index, [ServiceState? state]) {
+    final kind = CatalogSession.isAngebot(service) ? 'Angebot' : 'Termin';
     final title = _buildCore(service, index);
+    final withKind = '[$kind] $title';
     return switch (state) {
-      ServiceState.neu => '[NEU] $title',
-      ServiceState.updated => '[UPDATE] $title',
-      _ => title,
+      ServiceState.neu => '[NEU] $withKind',
+      ServiceState.updated => '[UPDATE] $withKind',
+      _ => withKind,
     };
   }
 

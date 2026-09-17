@@ -559,8 +559,113 @@ public class XmlServiceManager
             return;
 
         var importedHeader = exportDoc.ImportNode(headerTemplate, deep: true);
+        EnsureSupplierRequiredContent(importedHeader);
+        SanitizeKursnetHeader(importedHeader);
         ApplyExportGenerationDate(importedHeader);
+        headerTemplate = importedHeader.CloneNode(deep: true);
         root.AppendChild(importedHeader);
+    }
+
+    /// <summary>
+    /// XSD requires SUPPLIER/EXTENDED_INFO (minOccurs=1). Incomplete headers from
+    /// older exports are enriched from Main.xml when possible.
+    /// </summary>
+    private void EnsureSupplierRequiredContent(XmlNode header)
+    {
+        var supplier = header.ChildNodes
+            .Cast<XmlNode>()
+            .FirstOrDefault(n => n.LocalName.Equals("SUPPLIER", StringComparison.OrdinalIgnoreCase));
+        if (supplier == null)
+            return;
+
+        var hasExtendedInfo = supplier.ChildNodes
+            .Cast<XmlNode>()
+            .Any(n => n.LocalName.Equals("EXTENDED_INFO", StringComparison.OrdinalIgnoreCase));
+        var hasKeyword = supplier.ChildNodes
+            .Cast<XmlNode>()
+            .Any(n => n.LocalName.Equals("KEYWORD", StringComparison.OrdinalIgnoreCase));
+        if (hasExtendedInfo && hasKeyword)
+            return;
+
+        var templateSupplier = LoadMainTemplateSupplier();
+        var owner = supplier.OwnerDocument;
+        if (templateSupplier != null && owner != null)
+        {
+            if (!hasKeyword)
+            {
+                foreach (XmlNode keyword in templateSupplier.ChildNodes)
+                {
+                    if (!keyword.LocalName.Equals("KEYWORD", StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    supplier.AppendChild(owner.ImportNode(keyword, deep: true));
+                }
+            }
+
+            if (!hasExtendedInfo)
+            {
+                var extended = templateSupplier.ChildNodes
+                    .Cast<XmlNode>()
+                    .FirstOrDefault(n =>
+                        n.LocalName.Equals("EXTENDED_INFO", StringComparison.OrdinalIgnoreCase));
+                if (extended != null)
+                {
+                    supplier.AppendChild(owner.ImportNode(extended, deep: true));
+                    return;
+                }
+            }
+            else
+            {
+                return;
+            }
+        }
+
+        if (hasExtendedInfo || owner == null)
+            return;
+
+        var supplierId = supplier.GetChildText("SUPPLIER_ID")?.Trim() ?? "";
+        var extendedInfo = owner.CreateElement("EXTENDED_INFO");
+        var inputType = owner.CreateAttribute("input_type");
+        inputType.Value = "0";
+        extendedInfo.Attributes.Append(inputType);
+
+        if (!string.IsNullOrEmpty(supplierId))
+        {
+            var institutionNumber = owner.CreateElement("INSTITUTION_NUMBER");
+            institutionNumber.InnerText = supplierId;
+            extendedInfo.AppendChild(institutionNumber);
+        }
+
+        var organizationalForm = owner.CreateElement("ORGANIZATIONAL_FORM");
+        var typeAttr = owner.CreateAttribute("type");
+        typeAttr.Value = "2";
+        organizationalForm.Attributes.Append(typeAttr);
+        organizationalForm.InnerText = "Private Bildungseinrichtung";
+        extendedInfo.AppendChild(organizationalForm);
+
+        supplier.AppendChild(extendedInfo);
+    }
+
+    private XmlNode? LoadMainTemplateSupplier()
+    {
+        var mainPath = Path.Combine(servicesTemplateFolder, "Main.xml");
+        if (!File.Exists(mainPath))
+            return null;
+
+        try
+        {
+            var doc = new XmlDocument { PreserveWhitespace = true };
+            doc.Load(mainPath);
+            var header = doc.DocumentElement?.ChildNodes
+                .Cast<XmlNode>()
+                .FirstOrDefault(n => n.LocalName.Equals("HEADER", StringComparison.OrdinalIgnoreCase));
+            return header?.ChildNodes
+                .Cast<XmlNode>()
+                .FirstOrDefault(n => n.LocalName.Equals("SUPPLIER", StringComparison.OrdinalIgnoreCase));
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static void ApplyExportGenerationDate(XmlNode header)
@@ -621,6 +726,134 @@ public class XmlServiceManager
         RemoveInvalidEducationExtendedInfoElements(service);
         NormalizeLocationEmailElements(service);
         SyncCourseIdWithProductId(service);
+        SanitizeKursnetSubtree(service);
+    }
+
+    private static void SanitizeKursnetHeader(XmlNode header)
+    {
+        SanitizeKursnetSubtree(header);
+        EnsureDocumentCreatorFields(header);
+        EnsureSupplierContactRole(header);
+    }
+
+    private static void SanitizeKursnetSubtree(XmlNode node)
+    {
+        var children = node.ChildNodes.Cast<XmlNode>().ToList();
+        foreach (var child in children)
+        {
+            if (child.NodeType != XmlNodeType.Element)
+                continue;
+
+            if (child.LocalName.Equals("COUNTRY", StringComparison.OrdinalIgnoreCase))
+            {
+                var value = (child.InnerText ?? "").Trim().ToLowerInvariant();
+                if (value is "deutschland" or "germany" or "d" or "de")
+                    child.InnerText = "DE";
+            }
+
+            if (child.LocalName.Equals("PHONE", StringComparison.OrdinalIgnoreCase) ||
+                child.LocalName.Equals("FAX", StringComparison.OrdinalIgnoreCase) ||
+                child.LocalName.Equals("MOBILE", StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.IsNullOrWhiteSpace(child.InnerText))
+                {
+                    child.ParentNode?.RemoveChild(child);
+                    continue;
+                }
+            }
+
+            if (child.LocalName.Equals("CERT_VALIDITY", StringComparison.OrdinalIgnoreCase) &&
+                string.IsNullOrWhiteSpace(child.InnerText) &&
+                !child.HasChildNodes)
+            {
+                child.ParentNode?.RemoveChild(child);
+                continue;
+            }
+
+            SanitizeKursnetSubtree(child);
+        }
+    }
+
+    private static void EnsureDocumentCreatorFields(XmlNode header)
+    {
+        var creator = header.ChildNodes.Cast<XmlNode>().FirstOrDefault(n =>
+            n.LocalName.Equals("DOCUMENT_CREATOR", StringComparison.OrdinalIgnoreCase));
+        if (creator?.OwnerDocument == null)
+            return;
+
+        if (!creator.ChildNodes.Cast<XmlNode>().Any(n =>
+                n.LocalName.Equals("SALUTATION", StringComparison.OrdinalIgnoreCase)))
+        {
+            var salutation = creator.OwnerDocument.CreateElement("SALUTATION");
+            salutation.InnerText = "m";
+            var first = creator.ChildNodes.Cast<XmlNode>().FirstOrDefault(n =>
+                n.LocalName.Equals("FIRST_NAME", StringComparison.OrdinalIgnoreCase));
+            if (first != null)
+                creator.InsertBefore(salutation, first);
+            else
+                creator.PrependChild(salutation);
+        }
+
+        var emails = creator.ChildNodes.Cast<XmlNode>().FirstOrDefault(n =>
+            n.LocalName.Equals("EMAILS", StringComparison.OrdinalIgnoreCase));
+        if (emails != null)
+            return;
+
+        var emailsNode = creator.OwnerDocument.CreateElement("EMAILS");
+        var email = creator.OwnerDocument.CreateElement("EMAIL");
+        email.InnerText = "info@cdemy.de";
+        emailsNode.AppendChild(email);
+        var phone = creator.ChildNodes.Cast<XmlNode>().FirstOrDefault(n =>
+            n.LocalName.Equals("PHONE", StringComparison.OrdinalIgnoreCase));
+        if (phone?.NextSibling != null)
+            creator.InsertAfter(emailsNode, phone);
+        else
+            creator.AppendChild(emailsNode);
+    }
+
+    private static void EnsureSupplierContactRole(XmlNode header)
+    {
+        var supplier = header.ChildNodes.Cast<XmlNode>().FirstOrDefault(n =>
+            n.LocalName.Equals("SUPPLIER", StringComparison.OrdinalIgnoreCase));
+        if (supplier == null)
+            return;
+
+        var contacts = supplier.ChildNodes.Cast<XmlNode>()
+            .Where(n => n.LocalName.Equals("CONTACT", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (contacts.Count == 0)
+            return;
+
+        var hasRequired = contacts.Any(c =>
+        {
+            var role = c.ChildNodes.Cast<XmlNode>().FirstOrDefault(n =>
+                n.LocalName.Equals("CONTACT_ROLE", StringComparison.OrdinalIgnoreCase));
+            var type = role?.Attributes?["type"]?.Value;
+            return type is "2" or "3";
+        });
+        if (hasRequired)
+            return;
+
+        var first = contacts[0];
+        var existingRole = first.ChildNodes.Cast<XmlNode>().FirstOrDefault(n =>
+            n.LocalName.Equals("CONTACT_ROLE", StringComparison.OrdinalIgnoreCase));
+        if (existingRole == null)
+        {
+            if (first.OwnerDocument == null)
+                return;
+            var role = first.OwnerDocument.CreateElement("CONTACT_ROLE");
+            var attr = first.OwnerDocument.CreateAttribute("type");
+            attr.Value = "3";
+            role.Attributes.Append(attr);
+            role.InnerText = "Leiter des Betriebs";
+            first.PrependChild(role);
+            return;
+        }
+
+        var typeAttr = existingRole.Attributes?["type"];
+        if (typeAttr != null)
+            typeAttr.Value = "3";
+        existingRole.InnerText = "Leiter des Betriebs";
     }
 
     private static void SyncCourseIdWithProductId(XmlNode service)

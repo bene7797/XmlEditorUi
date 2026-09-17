@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:xml/xml.dart';
 
 import '../../app/editor_controller.dart';
+import '../../data/reference/openq_reference.dart';
 import '../../data/templates/service_template_repository.dart';
 import '../../data/xml/xml_path.dart';
+import '../../domain/catalog/models.dart';
 import '../../domain/fields/template_field_collector.dart';
 import '../../domain/fields/template_field_definitions.dart';
 import '../../domain/templates/main_template_variants.dart';
@@ -51,10 +54,10 @@ class _TemplateEditorPageState extends State<TemplateEditorPage>
           child: TabBarView(
             controller: _tabs,
             children: [
-              _MainTemplateTab(repo: widget.controller.templates),
-              _CourseTypeTab(repo: widget.controller.templates),
-              _LocationTab(repo: widget.controller.templates),
-              _HeaderTab(repo: widget.controller.templates),
+              _MainTemplateTab(controller: widget.controller),
+              _CourseTypeTab(controller: widget.controller),
+              _LocationTab(controller: widget.controller),
+              _HeaderTab(controller: widget.controller),
             ],
           ),
         ),
@@ -63,9 +66,77 @@ class _TemplateEditorPageState extends State<TemplateEditorPage>
   }
 }
 
+Future<void> _editTemplateField(
+  BuildContext context, {
+  required XmlElement service,
+  required FieldGridRow row,
+  required OpenqReference reference,
+}) async {
+  if (reference.isSystematikPath(row.path)) {
+    final selected = await showSystematikPickerDialog(
+      context,
+      reference: reference,
+      currentId: row.value,
+    );
+    if (selected == null) return;
+    XmlPath.setNodeByPath(service, row.path, selected.id);
+    final valuePath = row.path.replaceFirst(
+      RegExp(r'FNAME$', caseSensitive: false),
+      'FVALUE',
+    );
+    XmlPath.setNodeByPath(service, valuePath, selected.label);
+    return;
+  }
+
+  final options = reference.optionsForPath(row.path);
+  if (options != null && options.isNotEmpty) {
+    final selected = await showCodedPickerDialog(
+      context,
+      title: row.label,
+      options: options,
+      currentId: XmlPath.getTextByPath(
+            service,
+            row.path.contains('@') ? row.path : '${row.path}@type',
+          ) ??
+          row.value,
+    );
+    if (selected == null) return;
+    _applyCodedValue(service, row.path, selected);
+    return;
+  }
+
+  final edited = await showTextEditorDialog(
+    context,
+    title: row.label,
+    initialValue: row.value,
+  );
+  if (edited == null) return;
+  XmlPath.setNodeByPath(service, row.path, edited);
+}
+
+void _applyCodedValue(XmlElement service, String path, CodedValue value) {
+  final elementPath = path.contains('@')
+      ? path.split('@').first.replaceAll(RegExp(r'/+$'), '')
+      : path;
+  final upper = elementPath.toUpperCase();
+  if (upper.endsWith('CERTIFICATE_STATUS') ||
+      upper.endsWith('CERTIFIER_NUMBER') ||
+      upper.endsWith('COUNTRY')) {
+    XmlPath.setNodeByPath(service, elementPath, value.id);
+  } else {
+    XmlPath.setNodeByPath(service, '$elementPath@type', value.id);
+    if (!upper.endsWith('DURATION')) {
+      final node = XmlPath.getNodeByPath(service, elementPath);
+      if (node == null || !XmlPath.hasElementChildren(node)) {
+        XmlPath.setNodeByPath(service, elementPath, value.label);
+      }
+    }
+  }
+}
+
 class _MainTemplateTab extends StatefulWidget {
-  const _MainTemplateTab({required this.repo});
-  final ServiceTemplateRepository repo;
+  const _MainTemplateTab({required this.controller});
+  final EditorController controller;
 
   @override
   State<_MainTemplateTab> createState() => _MainTemplateTabState();
@@ -82,20 +153,19 @@ class _MainTemplateTabState extends State<_MainTemplateTab> {
   }
 
   void _reload() {
-    _session = widget.repo.loadMainTemplateSession(_variant);
+    _session = widget.controller.templates.loadMainTemplateSession(_variant);
     setState(() {});
   }
 
   Future<void> _edit(FieldGridRow row) async {
     final session = _session;
     if (session == null) return;
-    final edited = await showTextEditorDialog(
+    await _editTemplateField(
       context,
-      title: row.label,
-      initialValue: row.value,
+      service: session.service,
+      row: row,
+      reference: widget.controller.reference,
     );
-    if (edited == null) return;
-    XmlPath.setNodeByPath(session.service, row.path, edited);
     setState(() {});
   }
 
@@ -105,14 +175,7 @@ class _MainTemplateTabState extends State<_MainTemplateTab> {
     final rows = session == null
         ? <FieldGridRow>[]
         : TemplateFieldCollector.collectFromService(session.service)
-            .map(
-              (f) => FieldGridRow(
-                label: f.label,
-                path: f.path,
-                value: XmlPath.getTextByPath(session.service, f.path) ?? '',
-                color: FieldRowColor.normal,
-              ),
-            )
+            .map((f) => _typedRow(widget.controller.reference, session.service, f))
             .toList();
 
     return Padding(
@@ -163,8 +226,8 @@ class _MainTemplateTabState extends State<_MainTemplateTab> {
 }
 
 class _CourseTypeTab extends StatefulWidget {
-  const _CourseTypeTab({required this.repo});
-  final ServiceTemplateRepository repo;
+  const _CourseTypeTab({required this.controller});
+  final EditorController controller;
 
   @override
   State<_CourseTypeTab> createState() => _CourseTypeTabState();
@@ -177,41 +240,34 @@ class _CourseTypeTabState extends State<_CourseTypeTab> {
   @override
   void initState() {
     super.initState();
-    final names = widget.repo.getDistinctCourseTypeNames();
+    final names = widget.controller.templates.getDistinctCourseTypeNames();
     if (names.isNotEmpty) {
       _selected = names.first;
-      _session = widget.repo.findTemplateByFileNameContains(_selected!);
+      _session =
+          widget.controller.templates.findTemplateByFileNameContains(_selected!);
     }
   }
 
   Future<void> _edit(FieldGridRow row) async {
     final session = _session;
     if (session == null) return;
-    final edited = await showTextEditorDialog(
+    await _editTemplateField(
       context,
-      title: row.label,
-      initialValue: row.value,
+      service: session.service,
+      row: row,
+      reference: widget.controller.reference,
     );
-    if (edited == null) return;
-    XmlPath.setNodeByPath(session.service, row.path, edited);
     setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final names = widget.repo.getDistinctCourseTypeNames();
+    final names = widget.controller.templates.getDistinctCourseTypeNames();
     final session = _session;
     final rows = session == null
         ? <FieldGridRow>[]
         : CourseTypeTemplateFields.essentialFields
-            .map(
-              (f) => FieldGridRow(
-                label: f.label,
-                path: f.path,
-                value: XmlPath.getTextByPath(session.service, f.path) ?? '',
-                color: FieldRowColor.normal,
-              ),
-            )
+            .map((f) => _typedRow(widget.controller.reference, session.service, f))
             .toList();
 
     return Padding(
@@ -229,8 +285,8 @@ class _CourseTypeTabState extends State<_CourseTypeTab> {
                 onChanged: (v) {
                   setState(() {
                     _selected = v;
-                    _session =
-                        widget.repo.findTemplateByFileNameContains(v!);
+                    _session = widget.controller.templates
+                        .findTemplateByFileNameContains(v!);
                   });
                 },
               ),
@@ -262,8 +318,8 @@ class _CourseTypeTabState extends State<_CourseTypeTab> {
 }
 
 class _LocationTab extends StatefulWidget {
-  const _LocationTab({required this.repo});
-  final ServiceTemplateRepository repo;
+  const _LocationTab({required this.controller});
+  final EditorController controller;
 
   @override
   State<_LocationTab> createState() => _LocationTabState();
@@ -276,41 +332,33 @@ class _LocationTabState extends State<_LocationTab> {
   @override
   void initState() {
     super.initState();
-    final names = widget.repo.getDistinctLocationNames();
+    final names = widget.controller.templates.getDistinctLocationNames();
     if (names.isNotEmpty) {
       _selected = names.first;
-      _session = widget.repo.findTemplateByCity(_selected!);
+      _session = widget.controller.templates.findTemplateByCity(_selected!);
     }
   }
 
   Future<void> _edit(FieldGridRow row) async {
     final session = _session;
     if (session == null) return;
-    final edited = await showTextEditorDialog(
+    await _editTemplateField(
       context,
-      title: row.label,
-      initialValue: row.value,
+      service: session.service,
+      row: row,
+      reference: widget.controller.reference,
     );
-    if (edited == null) return;
-    XmlPath.setNodeByPath(session.service, row.path, edited);
     setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final names = widget.repo.getDistinctLocationNames();
+    final names = widget.controller.templates.getDistinctLocationNames();
     final session = _session;
     final rows = session == null
         ? <FieldGridRow>[]
         : LocationTemplateFields.essentialFields
-            .map(
-              (f) => FieldGridRow(
-                label: f.label,
-                path: f.path,
-                value: XmlPath.getTextByPath(session.service, f.path) ?? '',
-                color: FieldRowColor.normal,
-              ),
-            )
+            .map((f) => _typedRow(widget.controller.reference, session.service, f))
             .toList();
 
     return Padding(
@@ -328,7 +376,8 @@ class _LocationTabState extends State<_LocationTab> {
                 onChanged: (v) {
                   setState(() {
                     _selected = v;
-                    _session = widget.repo.findTemplateByCity(v!);
+                    _session =
+                        widget.controller.templates.findTemplateByCity(v!);
                   });
                 },
               ),
@@ -360,8 +409,8 @@ class _LocationTabState extends State<_LocationTab> {
 }
 
 class _HeaderTab extends StatefulWidget {
-  const _HeaderTab({required this.repo});
-  final ServiceTemplateRepository repo;
+  const _HeaderTab({required this.controller});
+  final EditorController controller;
 
   @override
   State<_HeaderTab> createState() => _HeaderTabState();
@@ -373,19 +422,18 @@ class _HeaderTabState extends State<_HeaderTab> {
   @override
   void initState() {
     super.initState();
-    _session = widget.repo.loadMainTemplateSession();
+    _session = widget.controller.templates.loadMainTemplateSession();
   }
 
   Future<void> _edit(FieldGridRow row) async {
     final session = _session;
     if (session == null) return;
-    final edited = await showTextEditorDialog(
+    await _editTemplateField(
       context,
-      title: row.label,
-      initialValue: row.value,
+      service: session.service,
+      row: row,
+      reference: widget.controller.reference,
     );
-    if (edited == null) return;
-    XmlPath.setNodeByPath(session.service, row.path, edited);
     setState(() {});
   }
 
@@ -395,14 +443,7 @@ class _HeaderTabState extends State<_HeaderTab> {
     final rows = session == null
         ? <FieldGridRow>[]
         : HeaderTemplateFields.essentialFields
-            .map(
-              (f) => FieldGridRow(
-                label: f.label,
-                path: f.path,
-                value: XmlPath.getTextByPath(session.service, f.path) ?? '',
-                color: FieldRowColor.normal,
-              ),
-            )
+            .map((f) => _typedRow(widget.controller.reference, session.service, f))
             .toList();
 
     return Padding(
@@ -436,4 +477,28 @@ class _HeaderTabState extends State<_HeaderTab> {
       ),
     );
   }
+}
+
+FieldGridRow _typedRow(
+  OpenqReference reference,
+  XmlElement service,
+  TemplateFieldDefinition field,
+) {
+  final value = XmlPath.getTextByPath(service, field.path) ?? '';
+  final coded = _codedRaw(service, field.path, value);
+  return FieldGridRow(
+    label: field.label,
+    path: field.path,
+    value: value,
+    color: FieldRowColor.normal,
+    tooltip: reference.tooltipFor(field.path, coded),
+    displayValue: reference.displayFor(field.path, coded),
+  );
+}
+
+String _codedRaw(XmlElement service, String path, String value) {
+  if (path.contains('@')) return value;
+  final typeAttr = XmlPath.getTextByPath(service, '$path@type');
+  if (typeAttr != null && typeAttr.trim().isNotEmpty) return typeAttr;
+  return value;
 }

@@ -1,4 +1,20 @@
-# Template-Konfigurationssystem
+# Template-Konfigurationssystem (WinForms, Legacy)
+
+Der aktuelle Editor ist Flutter. Felder und Abläufe bitte in **[docs/VORLAGEN.md](docs/VORLAGEN.md)** und **[docs/WARTUNG.md](docs/WARTUNG.md)** nachschlagen.
+
+Die Dart-Entsprechungen:
+
+| Früher (C#) | Jetzt |
+|-------------|--------|
+| `Models/CourseTypeTemplateFields.cs` | `flutter/lib/domain/fields/template_field_definitions.dart` |
+| `Models/LocationTemplateFields.cs` | dieselbe Datei, `LocationTemplateFields` |
+| `Models/HeaderTemplateFields.cs` | `HeaderTemplateFields` |
+| `Services/TemplateFieldMapping.cs` | `flutter/lib/domain/fields/template_field_mapping.dart` |
+| `Services/TemplateConfigurationManager.cs` | `flutter/lib/domain/templates/template_configurator.dart` |
+
+Unten bleibt die originale WinForms-Beschreibung für die alte EXE.
+
+---
 
 ## Übersicht
 
@@ -172,4 +188,3 @@ serviceManager.AddServiceFromConfiguredTemplate(configuredTemplate);
 **Felder werden nicht angepasst**
 - Überprüfe den XML-Pfad in CourseTypeTemplateFields/LocationTemplateFields
 - Teste: Öffne Template im Editor, bearbeite Feld, speichern, neu laden
-

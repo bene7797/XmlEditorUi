@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wsdl:definitions
+	targetNamespace="http://ws.apache.org/axis2"
+	xmlns:http="http://schemas.xmlsoap.org/wsdl/http/"
+	xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/"
+	xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+	xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+	xmlns:tns="http://ws.apache.org/axis2"
+	xmlns:tnsxsd="http://ws.apache.org/axis2/xsd">
+	<wsdl:types>
+		<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://ws.apache.org/axis2/xsd"
+			attributeFormDefault="qualified" elementFormDefault="qualified">
+			<xs:element name="OpenqFault" type="xs:anyType" />
+			<xs:element name="download">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="userLogin" type="xs:string" />
+						<xs:element name="userPassword" type="xs:string" />
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="downloadResponse">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="return" type="xs:base64Binary" />
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="testAccessResponse">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="return" type="xs:string" />
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="upload">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="openqData" type="xs:base64Binary" />
+						<xs:element name="userLogin" type="xs:string" />
+						<xs:element name="userPassword" type="xs:string" />
+						<xs:element name="action" type="xs:int" />
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="uploadResponse">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="return" type="xs:string" />
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+		</xs:schema>
+	</wsdl:types>
+	<wsdl:message name="OpenqFaultException">
+		<wsdl:part name="fault" element="tnsxsd:OpenqFault" />
+	</wsdl:message>
+	<wsdl:message name="downloadMessage">
+		<wsdl:part name="part1" element="tnsxsd:download" />
+	</wsdl:message>
+
+	<wsdl:message name="downloadResponseMessage">
+		<wsdl:part name="part1" element="tnsxsd:downloadResponse" />
+	</wsdl:message>
+
+	<wsdl:message name="testAccessMessage" />
+	<wsdl:message name="testAccessResponseMessage">
+		<wsdl:part name="part1" element="tnsxsd:testAccessResponse" />
+	</wsdl:message>
+	<wsdl:message name="uploadMessage">
+		<wsdl:part name="part1" element="tnsxsd:upload" />
+	</wsdl:message>
+	<wsdl:message name="uploadResponseMessage">
+		<wsdl:part name="part1" element="tnsxsd:uploadResponse" />
+	</wsdl:message>
+	<wsdl:portType name="UploadOpenqPortType">
+		<wsdl:operation name="download">
+			<wsdl:input message="tns:downloadMessage" />
+			<wsdl:output message="tns:downloadResponseMessage" />
+			<wsdl:fault name="fault" message="tns:OpenqFaultException" />
+		</wsdl:operation>
+		<wsdl:operation name="testAccess">
+			<wsdl:input message="tns:testAccessMessage" />
+			<wsdl:output message="tns:testAccessResponseMessage" />
+		</wsdl:operation>
+		<wsdl:operation name="upload">
+			<wsdl:input message="tns:uploadMessage" />
+			<wsdl:output message="tns:uploadResponseMessage" />
+			<wsdl:fault name="fault" message="tns:OpenqFaultException" />
+		</wsdl:operation>
+	</wsdl:portType>
+
+	<wsdl:binding name="UploadOpenqSOAPBinding" type="tns:UploadOpenqPortType">
+		<soap:binding transport="http://schemas.xmlsoap.org/soap/http"
+			style="document" />
+		<wsdl:operation name="download">
+			<soap:operation soapAction="urn:download" style="document" />
+			<wsdl:input>
+				<soap:body use="literal" />
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal" />
+			</wsdl:output>
+			<wsdl:fault name="fault">
+				<soap:fault name="fault" use="literal" />
+			</wsdl:fault>
+		</wsdl:operation>
+
+		<wsdl:operation name="testAccess">
+			<soap:operation soapAction="urn:testAccess" style="document" />
+			<wsdl:input>
+				<soap:body use="literal" />
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal" />
+			</wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="upload">
+			<soap:operation soapAction="urn:upload" style="document" />
+			<wsdl:input>
+				<soap:body use="literal" />
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal" />
+			</wsdl:output>
+			<wsdl:fault name="fault">
+				<soap:fault name="fault" use="literal" />
+			</wsdl:fault>
+		</wsdl:operation>
+	</wsdl:binding>
+	<wsdl:service name="UploadOpenq">
+		<wsdl:port name="UploadOpenqPort" binding="tns:UploadOpenqSOAPBinding">
+			<soap:address
+				location="https://www.kursnet-online.arbeitsagentur.de/onlinekurs/ws-kursnet/UploadOpenq?wsdl" />
+		</wsdl:port>
+	</wsdl:service>
+
+</wsdl:definitions>

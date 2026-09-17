@@ -1,8 +1,10 @@
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:xml/xml.dart';
 
 import '../../app/editor_controller.dart';
+import '../../debug/xml_file_diff.dart';
 import '../../data/xml/xml_path.dart';
 import '../../domain/catalog/models.dart';
 import '../../domain/dates/date_field_rules.dart';
@@ -89,6 +91,70 @@ class _ServiceEditorPageState extends State<ServiceEditorPage> {
       );
     } else {
       _showError(error);
+    }
+  }
+
+  Future<void> _validateKursnet() async {
+    if (!c.session.isLoaded) {
+      _showError('Bitte zuerst XML öffnen.');
+      return;
+    }
+    try {
+      final errors = c.validateKursnetRules();
+      if (!mounted) return;
+      if (errors.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('KURSNET-Regeln erfüllt.')),
+        );
+      } else {
+        _showError(errors.join('\n'));
+      }
+    } catch (e) {
+      _showError('$e');
+    }
+  }
+
+  Future<void> _uploadKursnet() async {
+    if (!c.session.isLoaded) {
+      _showError('Bitte zuerst XML öffnen.');
+      return;
+    }
+    final login = await showKursnetUploadDialog(
+      context,
+      savedUser: c.loadSavedKursnetUser(),
+    );
+    if (login == null) return;
+    if (login.user.isEmpty || login.password.isEmpty) {
+      _showError('Benutzer und Passwort sind erforderlich.');
+      return;
+    }
+    try {
+      await c.saveKursnetUser(login.user);
+      final result = await c.uploadToKursnet(
+        user: login.user,
+        password: login.password,
+        action: login.action,
+      );
+      if (!mounted) return;
+      _showError(result.isEmpty ? 'KURSNET hat keine Rückmeldung geliefert.' : result);
+    } catch (e) {
+      _showError('$e');
+    }
+  }
+
+  Future<void> _addVeranstaltung() async {
+    if (!c.session.isLoaded) {
+      _showError('Bitte zuerst XML öffnen.');
+      return;
+    }
+    if (c.selectedService == null) {
+      _showError('Bitte ein Bildungsangebot auswählen.');
+      return;
+    }
+    try {
+      c.addVeranstaltung();
+    } catch (e) {
+      _showError('$e');
     }
   }
 
@@ -227,8 +293,11 @@ class _ServiceEditorPageState extends State<ServiceEditorPage> {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Fehler'),
-        content: Text(message),
+        title: const Text('Hinweis'),
+        content: SizedBox(
+          width: 560,
+          child: SingleChildScrollView(child: Text(message)),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -256,6 +325,8 @@ class _ServiceEditorPageState extends State<ServiceEditorPage> {
         value: value,
         color: color,
         isDate: DateFieldRules.isDatePath(field.path),
+        tooltip: c.reference.tooltipFor(field.path, value),
+        displayValue: c.reference.displayFor(field.path, value),
       );
     }).toList();
   }
@@ -263,12 +334,17 @@ class _ServiceEditorPageState extends State<ServiceEditorPage> {
   List<FieldGridRow> _detailRows(XmlElement service) {
     return TemplateFieldCollector.collectFilledFields(service).map((field) {
       final value = XmlPath.getTextByPath(service, field.path) ?? '';
+      final coded = field.path.contains('@')
+          ? value
+          : (XmlPath.getTextByPath(service, '${field.path}@type') ?? value);
       return FieldGridRow(
         label: field.label,
         path: field.path,
         value: value,
         color: FieldRowColor.normal,
         isDate: DateFieldRules.isDatePath(field.path),
+        tooltip: c.reference.tooltipFor(field.path, coded),
+        displayValue: c.reference.displayFor(field.path, coded),
       );
     }).toList();
   }
@@ -291,6 +367,34 @@ class _ServiceEditorPageState extends State<ServiceEditorPage> {
       return;
     }
 
+    if (c.reference.isSystematikPath(row.path)) {
+      final selected = await showSystematikPickerDialog(
+        context,
+        reference: c.reference,
+        currentId: row.value,
+      );
+      if (selected == null) return;
+      c.setSystematik(service, row.path, selected);
+      return;
+    }
+
+    final options = c.reference.optionsForPath(row.path);
+    if (options != null && options.isNotEmpty) {
+      final selected = await showCodedPickerDialog(
+        context,
+        title: row.label,
+        options: options,
+        currentId: XmlPath.getTextByPath(
+              service,
+              row.path.contains('@') ? row.path : '${row.path}@type',
+            ) ??
+            row.value,
+      );
+      if (selected == null) return;
+      c.setCodedValue(service, row.path, selected);
+      return;
+    }
+
     final edited = await showTextEditorDialog(
       context,
       title: row.label,
@@ -298,6 +402,73 @@ class _ServiceEditorPageState extends State<ServiceEditorPage> {
     );
     if (edited == null) return;
     c.setFieldValue(service, row.path, edited);
+  }
+
+  Future<void> _compareXmlFiles() async {
+    final input = await FilePicker.platform.pickFiles(
+      dialogTitle: 'Input-XML wählen',
+      type: FileType.custom,
+      allowedExtensions: ['xml'],
+    );
+    if (input == null || input.files.single.path == null) return;
+    if (!mounted) return;
+
+    final output = await FilePicker.platform.pickFiles(
+      dialogTitle: 'Output-XML wählen',
+      type: FileType.custom,
+      allowedExtensions: ['xml'],
+    );
+    if (output == null || output.files.single.path == null) return;
+
+    try {
+      final result = XmlFileDiff.compareFiles(
+        input.files.single.path!,
+        output.files.single.path!,
+      );
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(
+            result.isIdentical
+                ? 'XML identisch'
+                : 'XML unterscheidet sich (${result.diffs.length}'
+                    '${result.diffs.length >= XmlFileDiff.maxDiffs ? '+' : ''})',
+          ),
+          content: SizedBox(
+            width: 720,
+            height: 480,
+            child: result.isIdentical
+                ? const Text(
+                    'Inhaltlich gleich (Formatierung, Kommentare und XML-Header ignoriert).',
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Input: ${result.leftPath}\nOutput: ${result.rightPath}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: SelectableText(result.diffs.join('\n')),
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      _showError('$e');
+    }
   }
 
   @override
@@ -328,9 +499,23 @@ class _ServiceEditorPageState extends State<ServiceEditorPage> {
                 icon: const Icon(Icons.rule),
                 label: const Text('Gegen XSD prüfen'),
               ),
+              OutlinedButton.icon(
+                onPressed: _validateKursnet,
+                icon: const Icon(Icons.fact_check),
+                label: const Text('KURSNET-Regeln'),
+              ),
+              OutlinedButton.icon(
+                onPressed: _uploadKursnet,
+                icon: const Icon(Icons.cloud_upload),
+                label: const Text('KURSNET-Upload'),
+              ),
               OutlinedButton(
                 onPressed: _createService,
-                child: const Text('Neuer Service'),
+                child: const Text('Neues Angebot'),
+              ),
+              OutlinedButton(
+                onPressed: _addVeranstaltung,
+                child: const Text('Termin zum Angebot'),
               ),
               OutlinedButton(
                 onPressed: _copyWith,
@@ -340,6 +525,12 @@ class _ServiceEditorPageState extends State<ServiceEditorPage> {
                 onPressed: _deleteService,
                 child: const Text('Service Löschen'),
               ),
+              if (kDebugMode)
+                OutlinedButton.icon(
+                  onPressed: _compareXmlFiles,
+                  icon: const Icon(Icons.compare_arrows),
+                  label: const Text('XML vergleichen'),
+                ),
             ],
           ),
           if (c.statusMessage != null) ...[
@@ -370,6 +561,10 @@ class _ServiceEditorPageState extends State<ServiceEditorPage> {
                         return ListTile(
                           selected: isSelected,
                           dense: true,
+                          contentPadding: EdgeInsets.only(
+                            left: item.isVeranstaltung ? 28 : 12,
+                            right: 12,
+                          ),
                           title: Text(
                             item.title,
                             style: const TextStyle(fontSize: 12),

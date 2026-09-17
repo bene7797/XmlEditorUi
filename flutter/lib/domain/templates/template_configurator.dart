@@ -36,6 +36,7 @@ class TemplateConfigurator {
         location.values['ZIPBOX'] = zip;
       }
     }
+    location.values.putIfAbsent('COUNTRY', () => 'DE');
     _applyFieldMappings(
       service,
       TemplateFieldMapping.locationFieldPaths,

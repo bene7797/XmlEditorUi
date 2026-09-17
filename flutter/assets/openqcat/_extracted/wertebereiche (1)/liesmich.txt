@@ -1,0 +1,29 @@
+Im Zip-Archiv sind folgende Dateien enthalten:
+
+abschlussgrad_studienangebot.dat Beinhaltet die aktuell gültigen Abschlussgrade von Hochschulabschlüssen (Studienangebote).
+akkreditierung.dat Beinhaltet die Akkreditierungen der Studiengänge.
+angebotstyp.dat Beinhaltet die möglich lieferbaren Angebotstypen.
+ansprechpartner.dat Beinhaltet die Rollen der Kontaktpersonen.
+behinderungen.dat Beinhaltet zuordenbare Behinderungen, für die Angebote geeignet sind.
+bildungsart.dat Beinhaltet die Bildungsarten der Bildungsangebote.
+dauerklassen.dat Beinhaltet die Zeitrahmen der Veranstaltungstermine.
+durchfuehrungsform.dat Beinhaltet die Durchführungsformen der Veranstaltungstermine zu Maßnahmeangeboten AVGS.
+foerderartenbund.dat Beinhaltet die bundesweiten Förderarten der Veranstaltungstermine (Bildungsangebote/Weiterbildungsangebote).
+foerderartenland.dat Beinhaltet die Bundesland-Förderarten der Veranstaltungstermine (Bildungsangebote/Weiterbildungsangebote).
+landpartnerhochschule.dat Beinhaltet die Länder für Partnerhochschulen.
+lehramtstyp.dat Beinhaltet die Lehramtstypen nach Schularten.
+mastertyp.dat Beinhaltet die Mastertypen eines Studienangebots.
+schulart.dat Beinhaltet die Schularten der Bildungsangebote.
+studienform.dat Beinhaltet duale Ausprägungen von Studienformen.
+studieren_ohne_abitur.dat Beinhaltet die Zugangsbedingungen zum Studium ohne Hochschulzugangsberechtigung.
+unterrichtsform.dat Beinhaltet die Unterrichtsformen der Veranstaltungstermine.
+unterrichtssprache.dat Beinhaltet die Unterrichtssprachen der Veranstaltungstermine. (Bildungsangebote/Weiterbildungsangebote/Sprachförderangebote)
+unterrichtszeit.dat Beinhaltet die Unterrichtszeiten der Veranstaltungstermine (Bildungsangebote/Weiterbildungsangebote).
+vgstrukturart.dat Beinhaltet die Arten der Veranstaltungsabläufe.
+zertstatus.dat Beinhaltet die Werte für die Förderung mit Bildungsgutschein oder die IQ-Förderung.
+zugehoerig.dat Beinhaltet die Organisationsform der Bildungsanbieter.
+zulassungsmodus.dat Beinhaltet die Zulassungsmodis für Studiengänge.
+zulassungssemester.dat Beinhaltet die Auswahlmöglichkeiten der Zulassungssemester/-trimester zum Studienbeginn.
+
+Die aktuelle Fassung der Dateien finden Sie unter:
+http://www.kursnet-online.arbeitsagentur.de/onlinekurs/upload/openq/wertebereiche.zip
