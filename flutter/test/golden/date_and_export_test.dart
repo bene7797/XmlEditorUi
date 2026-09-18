@@ -4,6 +4,7 @@ import 'package:xml_editor_flutter/data/xml/xml_path.dart';
 import 'package:xml_editor_flutter/domain/catalog/catalog_session.dart';
 import 'package:xml_editor_flutter/domain/catalog/models.dart';
 import 'package:xml_editor_flutter/domain/dates/date_field_rules.dart';
+import 'package:xml_editor_flutter/domain/fields/number_input.dart';
 import 'package:xml_editor_flutter/domain/templates/template_configurator.dart';
 
 void main() {
@@ -58,6 +59,20 @@ void main() {
         XmlPath.getTextByPath(service, DateFieldRules.courseEndPath),
         '2028-02-05T00:00:00.000+01:00',
       );
+    });
+  });
+
+  group('NumberInput', () {
+    test('converts comma decimal to dot', () {
+      expect(NumberInput.normalizeDecimal('1234,56'), '1234.56');
+    });
+
+    test('converts german thousands to xml decimal', () {
+      expect(NumberInput.normalizeDecimal('1.234,56'), '1234.56');
+    });
+
+    test('leaves text with commas alone', () {
+      expect(NumberInput.normalizeDecimal('Montag, Dienstag'), 'Montag, Dienstag');
     });
   });
 

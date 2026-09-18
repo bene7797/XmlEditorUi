@@ -164,6 +164,7 @@ public class XmlServiceManager
         insertParent.AppendChild(importedService);
         serviceStates[importedService] = ServiceState.New;
         pendingTemplateFields[importedService] = importantFields.Select(f => f.Path).ToHashSet();
+        ApplyStartDateDefaults(importedService);
 
         return importedService;
     }
@@ -197,6 +198,7 @@ public class XmlServiceManager
         insertParent.AppendChild(copiedService);
         serviceStates[copiedService] = ServiceState.New;
         pendingTemplateFields[copiedService] = importantFields.Select(f => f.Path).ToHashSet();
+        ApplyStartDateDefaults(copiedService);
 
         return copiedService;
     }
@@ -986,6 +988,12 @@ public class XmlServiceManager
             location.InsertBefore(newElement, insertBefore);
         else
             location.AppendChild(newElement);
+    }
+
+    private void ApplyStartDateDefaults(XmlNode service)
+    {
+        foreach (var path in DateFieldHelper.ApplyCourseStartDefaults(service))
+            MarkFieldAsChanged(service, path);
     }
 
     private void EnsureDocumentLoaded()

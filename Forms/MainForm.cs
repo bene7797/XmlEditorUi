@@ -510,7 +510,9 @@ public class MainForm : Form
         if (DateFieldHelper.IsDatePath(path))
             return;
 
-        var newValue = row.Cells[1].Value?.ToString() ?? string.Empty;
+        var newValue = NumberInputHelper.NormalizeDecimal(row.Cells[1].Value?.ToString() ?? string.Empty);
+        if (row.Cells[1].Value?.ToString() != newValue)
+            row.Cells[1].Value = newValue;
         selectedCourse.SetNodeByPath(path, newValue);
         serviceManager.MarkFieldAsChanged(selectedCourse, path);
         ApplyQuickFieldColor(row, selectedCourse, path);

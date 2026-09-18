@@ -68,6 +68,7 @@ public sealed class FieldGridEditHelper
         if (!TextEditorPopup.TryEdit(_owner, label, currentValue, out var newValue))
             return;
 
+        newValue = NumberInputHelper.NormalizeDecimal(newValue);
         row.Cells["Value"].Value = FieldValueFormatter.ForGridDisplay(newValue);
         ctx.ApplyValue(fieldPath, newValue);
         ctx.AfterEdit?.Invoke(fieldPath, newValue);

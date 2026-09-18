@@ -6,6 +6,7 @@ import 'package:xml/xml.dart';
 
 import '../../data/xml/xml_file_io.dart';
 import '../../data/xml/xml_path.dart';
+import '../dates/date_field_rules.dart';
 import '../fields/important_fields.dart';
 import '../kursnet/kursnet_rules.dart';
 import '../templates/template_configurator.dart';
@@ -113,6 +114,7 @@ class CatalogSession {
     serviceStates[imported] = ServiceState.neu;
     pendingTemplateFields[imported] =
         importantFields.map((f) => f.path).toSet();
+    _applyStartDateDefaults(imported);
     return imported;
   }
 
@@ -142,6 +144,7 @@ class CatalogSession {
     serviceStates[copied] = ServiceState.neu;
     pendingTemplateFields[copied] =
         importantFields.map((f) => f.path).toSet();
+    _applyStartDateDefaults(copied);
     return copied;
   }
 
@@ -720,6 +723,12 @@ class CatalogSession {
     final created = XmlElement(XmlName('NEW'));
     updateCatalog.children.add(created);
     return created;
+  }
+
+  void _applyStartDateDefaults(XmlElement service) {
+    for (final path in DateFieldRules.applyCourseStartDefaults(service)) {
+      markFieldAsChanged(service, path);
+    }
   }
 
   void _ensureLoaded() {

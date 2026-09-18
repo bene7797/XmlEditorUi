@@ -14,6 +14,7 @@ import '../data/xml/xml_path.dart';
 import '../domain/catalog/catalog_session.dart';
 import '../domain/catalog/models.dart';
 import '../domain/dates/date_field_rules.dart';
+import '../domain/fields/number_input.dart';
 import '../domain/kursnet/kursnet_rules.dart';
 import '../domain/templates/main_template_variants.dart';
 import '../domain/templates/template_configurator.dart';
@@ -128,6 +129,9 @@ class EditorController extends ChangeNotifier {
   }
 
   void setFieldValue(XmlElement service, String path, String value) {
+    if (!DateFieldRules.isDatePath(path)) {
+      value = NumberInput.normalizeDecimal(value);
+    }
     XmlPath.setNodeByPath(service, path, value);
     session.markFieldAsChanged(service, path);
 
