@@ -6,11 +6,13 @@ import '../../data/reference/openq_reference.dart';
 import '../../data/templates/service_template_repository.dart';
 import '../../data/xml/xml_path.dart';
 import '../../domain/catalog/models.dart';
+import '../../domain/dates/date_field_rules.dart';
 import '../../domain/fields/template_field_collector.dart';
 import '../../domain/fields/template_field_definitions.dart';
 import '../../domain/templates/main_template_variants.dart';
 import '../dialogs/common_dialogs.dart';
 import '../widgets/field_grid.dart';
+import '../widgets/grouped_field_form.dart';
 
 class TemplateEditorPage extends StatefulWidget {
   const TemplateEditorPage({super.key, required this.controller});
@@ -43,8 +45,9 @@ class _TemplateEditorPageState extends State<TemplateEditorPage>
       children: [
         TabBar(
           controller: _tabs,
+          labelStyle: const TextStyle(fontWeight: FontWeight.w700),
           tabs: const [
-            Tab(text: 'Main Template'),
+            Tab(text: 'Stamm'),
             Tab(text: 'Beschäftigungsart'),
             Tab(text: 'Ort'),
             Tab(text: 'Header'),
@@ -102,6 +105,24 @@ Future<void> _editTemplateField(
     );
     if (selected == null) return;
     _applyCodedValue(service, row.path, selected);
+    return;
+  }
+
+  if (DateFieldRules.isDatePath(row.path)) {
+    final picked = await showDateTimePickerDialog(
+      context,
+      initial: DateFieldRules.tryParse(row.value) ?? DateTime.now(),
+      includeTime: DateFieldRules.isCourseDatePath(row.path),
+    );
+    if (picked == null) return;
+    XmlPath.setNodeByPath(
+      service,
+      row.path,
+      DateFieldRules.format(
+        picked,
+        includeTime: DateFieldRules.isCourseDatePath(row.path),
+      ),
+    );
     return;
   }
 
@@ -178,49 +199,36 @@ class _MainTemplateTabState extends State<_MainTemplateTab> {
             .map((f) => _typedRow(widget.controller.reference, session.service, f))
             .toList();
 
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Column(
+    return _TemplatePane(
+      accent: const Color(0xFF1B4F72),
+      title: 'Stamm-Template',
+      selector: Row(
         children: [
-          Row(
-            children: [
-              const Text('Main-Template-Typ:'),
-              const SizedBox(width: 12),
-              DropdownButton<String>(
-                value: _variant,
-                items: MainTemplateVariants.all
-                    .map((v) => DropdownMenuItem(value: v, child: Text(v)))
-                    .toList(),
-                onChanged: (v) {
-                  _variant = v!;
-                  _reload();
-                },
-              ),
-              const Spacer(),
-              FilledButton(
-                onPressed: session == null
-                    ? null
-                    : () {
-                        session.save();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Main Template gespeichert'),
-                          ),
-                        );
-                      },
-                child: const Text('Main Template speichern'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: Card(
-              clipBehavior: Clip.antiAlias,
-              child: FieldGrid(rows: rows, onEdit: (row, _) => _edit(row)),
-            ),
+          const Text('Art'),
+          const SizedBox(width: 12),
+          DropdownButton<String>(
+            value: _variant,
+            items: MainTemplateVariants.all
+                .map((v) => DropdownMenuItem(value: v, child: Text(v)))
+                .toList(),
+            onChanged: (v) {
+              _variant = v!;
+              _reload();
+            },
           ),
         ],
       ),
+      onSave: session == null
+          ? null
+          : () {
+              session.save();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Stamm-Template gespeichert')),
+              );
+            },
+      saveLabel: 'Speichern',
+      rows: rows,
+      onEdit: _edit,
     );
   }
 }
@@ -270,49 +278,40 @@ class _CourseTypeTabState extends State<_CourseTypeTab> {
             .map((f) => _typedRow(widget.controller.reference, session.service, f))
             .toList();
 
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              DropdownButton<String>(
-                value: _selected,
-                hint: const Text('Beschäftigungsart'),
-                items: names
-                    .map((n) => DropdownMenuItem(value: n, child: Text(n)))
-                    .toList(),
-                onChanged: (v) {
-                  setState(() {
-                    _selected = v;
-                    _session = widget.controller.templates
-                        .findTemplateByFileNameContains(v!);
-                  });
-                },
-              ),
-              const Spacer(),
-              FilledButton(
-                onPressed: session == null
-                    ? null
-                    : () {
-                        session.save();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Gespeichert')),
-                        );
-                      },
-                child: const Text('Speichern'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: Card(
-              clipBehavior: Clip.antiAlias,
-              child: FieldGrid(rows: rows, onEdit: (row, _) => _edit(row)),
-            ),
-          ),
-        ],
+    return _TemplatePane(
+      accent: const Color(0xFF1E8449),
+      title: 'Beschäftigungsart',
+      selector: DropdownButton<String>(
+        value: _selected,
+        hint: const Text('Beschäftigungsart wählen'),
+        items: names
+            .map((n) => DropdownMenuItem(value: n, child: Text(n)))
+            .toList(),
+        onChanged: (v) {
+          setState(() {
+            _selected = v;
+            _session = widget.controller.templates
+                .findTemplateByFileNameContains(v!);
+          });
+        },
       ),
+      onSave: session == null
+          ? null
+          : () {
+              session.save();
+              if (_selected != null) {
+                widget.controller.profiles.upsertCourseTypeFromService(
+                  session.service,
+                  _selected!,
+                );
+              }
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Beschäftigungsart gespeichert')),
+              );
+            },
+      saveLabel: 'Speichern',
+      rows: rows,
+      onEdit: _edit,
     );
   }
 }
@@ -361,49 +360,35 @@ class _LocationTabState extends State<_LocationTab> {
             .map((f) => _typedRow(widget.controller.reference, session.service, f))
             .toList();
 
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              DropdownButton<String>(
-                value: _selected,
-                hint: const Text('Ort'),
-                items: names
-                    .map((n) => DropdownMenuItem(value: n, child: Text(n)))
-                    .toList(),
-                onChanged: (v) {
-                  setState(() {
-                    _selected = v;
-                    _session =
-                        widget.controller.templates.findTemplateByCity(v!);
-                  });
-                },
-              ),
-              const Spacer(),
-              FilledButton(
-                onPressed: session == null
-                    ? null
-                    : () {
-                        session.save();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Gespeichert')),
-                        );
-                      },
-                child: const Text('Speichern'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: Card(
-              clipBehavior: Clip.antiAlias,
-              child: FieldGrid(rows: rows, onEdit: (row, _) => _edit(row)),
-            ),
-          ),
-        ],
+    return _TemplatePane(
+      accent: const Color(0xFFB9770E),
+      title: 'Ort',
+      selector: DropdownButton<String>(
+        value: _selected,
+        hint: const Text('Ort wählen'),
+        items: names
+            .map((n) => DropdownMenuItem(value: n, child: Text(n)))
+            .toList(),
+        onChanged: (v) {
+          setState(() {
+            _selected = v;
+            _session = widget.controller.templates.findTemplateByCity(v!);
+          });
+        },
       ),
+      onSave: session == null
+          ? null
+          : () {
+              session.save();
+              widget.controller.profiles
+                  .upsertLocationFromService(session.service);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Ort gespeichert')),
+              );
+            },
+      saveLabel: 'Speichern',
+      rows: rows,
+      onEdit: _edit,
     );
   }
 }
@@ -446,35 +431,21 @@ class _HeaderTabState extends State<_HeaderTab> {
             .map((f) => _typedRow(widget.controller.reference, session.service, f))
             .toList();
 
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        children: [
-          Align(
-            alignment: Alignment.centerRight,
-            child: FilledButton(
-              onPressed: session == null
-                  ? null
-                  : () {
-                      session.save();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Header / Main gespeichert'),
-                        ),
-                      );
-                    },
-              child: const Text('Header speichern'),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: Card(
-              clipBehavior: Clip.antiAlias,
-              child: FieldGrid(rows: rows, onEdit: (row, _) => _edit(row)),
-            ),
-          ),
-        ],
-      ),
+    return _TemplatePane(
+      accent: const Color(0xFF2874A6),
+      title: 'Header',
+      selector: const Text('Katalog-, Empfänger- und Anbieterdaten'),
+      onSave: session == null
+          ? null
+          : () {
+              session.save();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Header gespeichert')),
+              );
+            },
+      saveLabel: 'Speichern',
+      rows: rows,
+      onEdit: _edit,
     );
   }
 }
@@ -491,8 +462,11 @@ FieldGridRow _typedRow(
     path: field.path,
     value: value,
     color: FieldRowColor.normal,
+    isDate: DateFieldRules.isDatePath(field.path),
     tooltip: reference.tooltipFor(field.path, coded),
-    displayValue: reference.displayFor(field.path, coded),
+    displayValue: DateFieldRules.isDatePath(field.path)
+        ? DateFieldRules.formatForUi(value)
+        : reference.displayFor(field.path, coded),
   );
 }
 
@@ -501,4 +475,87 @@ String _codedRaw(XmlElement service, String path, String value) {
   final typeAttr = XmlPath.getTextByPath(service, '$path@type');
   if (typeAttr != null && typeAttr.trim().isNotEmpty) return typeAttr;
   return value;
+}
+
+class _TemplatePane extends StatelessWidget {
+  const _TemplatePane({
+    required this.accent,
+    required this.title,
+    required this.selector,
+    required this.onSave,
+    required this.saveLabel,
+    required this.rows,
+    required this.onEdit,
+  });
+
+  final Color accent;
+  final String title;
+  final Widget selector;
+  final VoidCallback? onSave;
+  final String saveLabel;
+  final List<FieldGridRow> rows;
+  final ValueChanged<FieldGridRow> onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: accent.withValues(alpha: 0.35)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+              child: Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: accent,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: accent,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: selector,
+                    ),
+                  ),
+                  FilledButton.icon(
+                    onPressed: onSave,
+                    icon: const Icon(Icons.save_outlined, size: 16),
+                    label: Text(saveLabel),
+                    style: FilledButton.styleFrom(backgroundColor: accent),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: Card(
+              clipBehavior: Clip.antiAlias,
+              child: GroupedFieldForm(rows: rows, onEdit: onEdit),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

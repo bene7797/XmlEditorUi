@@ -57,5 +57,5 @@ public static class ServiceTitleBuilder
     }
 
     private static string ShortDate(string value) =>
-        value.Length >= 10 ? value[..10] : value;
+        DateFieldHelper.FormatForUi(value);
 }

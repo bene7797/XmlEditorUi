@@ -191,9 +191,22 @@ public class XmlServiceManager
         SyncCourseIdWithProductId(copiedService);
         ApplyServiceModeForWorkingCopy(copiedService);
 
-        TemplateConfigurationManager.ApplyLocationToService(copiedService, location);
+        var city = location.Values.GetValueOrDefault("CITY") ?? location.Name;
+        var locationSource = string.IsNullOrWhiteSpace(city)
+            ? null
+            : new ServiceTemplateRepository(servicesTemplateFolder)
+                .FindTemplateByCity(city)?.Service;
+
+        XmlNode? courseTypeSource = null;
         if (courseType != null)
-            TemplateConfigurationManager.ApplyCourseTypeToService(copiedService, courseType);
+        {
+            courseTypeSource = new ServiceTemplateRepository(servicesTemplateFolder)
+                .FindTemplateByFileNameContains(courseType.Name)?.Service;
+        }
+
+        TemplateConfigurationManager.ApplyLocationToService(copiedService, location, locationSource);
+        if (courseType != null)
+            TemplateConfigurationManager.ApplyCourseTypeToService(copiedService, courseType, courseTypeSource);
 
         insertParent.AppendChild(copiedService);
         serviceStates[copiedService] = ServiceState.New;
@@ -316,7 +329,7 @@ public class XmlServiceManager
         if (!File.Exists(schemaPath))
             throw new FileNotFoundException("XSD-Datei wurde nicht gefunden.", schemaPath);
 
-        var xmlDoc = XDocument.Load(xmlPath);
+        var xmlDoc = LoadXDocumentIgnoringDeclaredEncoding(xmlPath);
 
         var schemas = new XmlSchemaSet();
         schemas.Add(null, schemaPath);
@@ -325,6 +338,47 @@ public class XmlServiceManager
         {
             throw new XmlSchemaValidationException(args.Message);
         });
+    }
+
+    /// <summary>
+    /// XmlReader cannot honor encoding="iso-8859-15" on all runtimes.
+    /// Decode bytes first, rewrite the declaration, then parse.
+    /// </summary>
+    private static XDocument LoadXDocumentIgnoringDeclaredEncoding(string path)
+    {
+        var bytes = File.ReadAllBytes(path);
+        string text;
+        if (bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF)
+        {
+            text = Encoding.UTF8.GetString(bytes, 3, bytes.Length - 3);
+        }
+        else
+        {
+            try
+            {
+                text = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true)
+                    .GetString(bytes);
+            }
+            catch (DecoderFallbackException)
+            {
+                try
+                {
+                    text = Encoding.GetEncoding("iso-8859-15").GetString(bytes);
+                }
+                catch
+                {
+                    text = Encoding.Latin1.GetString(bytes);
+                }
+            }
+        }
+
+        text = System.Text.RegularExpressions.Regex.Replace(
+            text,
+            @"encoding\s*=\s*[""'][^""']+[""']",
+            "encoding=\"utf-8\"",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        return XDocument.Parse(text);
     }
 
     public IEnumerable<XmlNode> GetActiveServices()

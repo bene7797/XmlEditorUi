@@ -26,6 +26,11 @@ class XmlFileIo {
     }
   }
 
-  static XmlDocument loadDocument(String path) =>
-      XmlDocument.parse(readText(path));
+  static XmlDocument loadDocument(String path) {
+    final text = readText(path).replaceFirst(
+      RegExp(r'''(encoding\s*=\s*["'])iso-8859-15(["'])''', caseSensitive: false),
+      r'${1}utf-8$2',
+    );
+    return XmlDocument.parse(text);
+  }
 }

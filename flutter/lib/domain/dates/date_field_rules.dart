@@ -26,12 +26,50 @@ class DateFieldRules {
   static DateTime? tryParse(String? value) {
     if (value == null || value.trim().isEmpty) return null;
     var clean = value.trim();
+    final ui = _tryParseUi(clean);
+    if (ui != null) return ui;
     if (clean.contains('T')) {
       clean = clean.split('+').first;
     } else if (clean.contains('+')) {
       clean = clean.split('+').first;
     }
     return DateTime.tryParse(clean);
+  }
+
+  /// UI display: `TT.MM.JJJJ` (XML stays ISO).
+  static String formatForUi(String? xmlValue, {bool includeTime = false}) {
+    final date = tryParse(xmlValue);
+    if (date == null) return (xmlValue ?? '').trim();
+    return formatUi(date, includeTime: includeTime);
+  }
+
+  static String formatUi(DateTime date, {required bool includeTime}) {
+    final d = date.day.toString().padLeft(2, '0');
+    final m = date.month.toString().padLeft(2, '0');
+    final y = date.year.toString().padLeft(4, '0');
+    if (!includeTime) return '$d.$m.$y';
+    final hh = date.hour.toString().padLeft(2, '0');
+    final mm = date.minute.toString().padLeft(2, '0');
+    return '$d.$m.$y $hh:$mm';
+  }
+
+  static DateTime? _tryParseUi(String value) {
+    final match = RegExp(
+      r'^(\d{1,2})[.\s/-](\d{1,2})[.\s/-](\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$',
+    ).firstMatch(value);
+    if (match == null) return null;
+    final day = int.tryParse(match.group(1)!);
+    final month = int.tryParse(match.group(2)!);
+    final year = int.tryParse(match.group(3)!);
+    if (day == null || month == null || year == null) return null;
+    final hour = int.tryParse(match.group(4) ?? '0') ?? 0;
+    final minute = int.tryParse(match.group(5) ?? '0') ?? 0;
+    final second = int.tryParse(match.group(6) ?? '0') ?? 0;
+    try {
+      return DateTime(year, month, day, hour, minute, second);
+    } catch (_) {
+      return null;
+    }
   }
 
   static String format(DateTime date, {required bool includeTime}) {

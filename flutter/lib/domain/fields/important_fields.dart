@@ -1,6 +1,12 @@
 import '../catalog/models.dart';
 
 class ImportantFields {
+  static const titlePath = 'SERVICE_DETAILS/TITLE';
+  static const educationTypePath =
+      'SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/EXTENDED_INFO/EDUCATION_TYPE';
+  static const pricePath =
+      'SERVICE_PRICE_DETAILS/SERVICE_PRICE/PRICE_AMOUNT';
+
   static const List<QuickFieldDefinition> list = [
     QuickFieldDefinition(
       'Startdatum Kurs',
@@ -18,9 +24,15 @@ class ImportantFields {
       'Ankündigung Ende',
       'SERVICE_DETAILS/ANNOUNCEMENT/END_DATE',
     ),
-    QuickFieldDefinition(
-      'Preis',
-      'SERVICE_PRICE_DETAILS/SERVICE_PRICE/PRICE_AMOUNT',
-    ),
+    QuickFieldDefinition('Preis', pricePath),
   ];
+
+  static const List<QuickFieldDefinition> angebot = [
+    QuickFieldDefinition('Titel', titlePath),
+    QuickFieldDefinition('Bildungsart', educationTypePath),
+    QuickFieldDefinition('Preis', pricePath),
+  ];
+
+  static List<QuickFieldDefinition> forService({required bool isAngebot}) =>
+      isAngebot ? angebot : list;
 }

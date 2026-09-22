@@ -2,12 +2,37 @@ import 'package:xml/xml.dart';
 
 import '../../data/xml/xml_path.dart';
 import '../catalog/catalog_session.dart';
+import '../catalog/course_list_filter.dart';
 import '../catalog/models.dart';
+import '../dates/date_field_rules.dart';
 
 class ServiceTitleBuilder {
-  static String build(XmlElement service, int index, [ServiceState? state]) {
-    final kind = CatalogSession.isAngebot(service) ? 'Angebot' : 'Termin';
-    final title = _buildCore(service, index);
+  static String build(
+    XmlElement service,
+    int index, {
+    ServiceState? state,
+    bool asTermin = false,
+    bool includeStartDate = true,
+    bool compact = false,
+    bool neutral = false,
+  }) {
+    if (compact) {
+      return _buildCompact(
+        service,
+        index,
+        includeStartDate: includeStartDate,
+        neutral: neutral,
+      );
+    }
+
+    final kind = asTermin || !CatalogSession.isAngebot(service)
+        ? 'Termin'
+        : 'Angebot';
+    final title = _buildCore(
+      service,
+      index,
+      includeStartDate: includeStartDate,
+    );
     final withKind = '[$kind] $title';
     return switch (state) {
       ServiceState.neu => '[NEU] $withKind',
@@ -16,7 +41,58 @@ class ServiceTitleBuilder {
     };
   }
 
-  static String _buildCore(XmlElement service, int index) {
+  static String _buildCompact(
+    XmlElement service,
+    int index, {
+    required bool includeStartDate,
+    bool neutral = false,
+  }) {
+    if (neutral) {
+      final kind = CourseListFilter.educationKindOf(service).label;
+      final productId = XmlPath.getChildText(service, 'PRODUCT_ID');
+      final parts = <String>[kind];
+      if (productId != null && productId.trim().isNotEmpty) {
+        parts.add('ID: ${productId.trim()}');
+      }
+      return parts.join(' · ');
+    }
+
+    final city = _text(
+      XmlPath.getTextByPath(
+        service,
+        'SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/CITY',
+      ),
+      fallback: 'Ort ?',
+    );
+    final art = _text(
+      XmlPath.getTextByPath(
+        service,
+        'SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/EXTENDED_INFO/INSTRUCTION_TIME',
+      ),
+      fallback: 'Art ?',
+    );
+    final kind = CourseListFilter.educationKindOf(service).label;
+    final productId = XmlPath.getChildText(service, 'PRODUCT_ID');
+    final startDate =
+        XmlPath.getTextByPath(service, 'SERVICE_DETAILS/SERVICE_DATE/START_DATE');
+
+    final parts = <String>[city, kind, art];
+    if (productId != null && productId.trim().isNotEmpty) {
+      parts.add('ID: ${productId.trim()}');
+    }
+    if (includeStartDate &&
+        startDate != null &&
+        startDate.trim().isNotEmpty) {
+      parts.add('Start: ${_shortDate(startDate)}');
+    }
+    return parts.isNotEmpty ? parts.join(' · ') : 'SERVICE #${index + 1}';
+  }
+
+  static String _buildCore(
+    XmlElement service,
+    int index, {
+    required bool includeStartDate,
+  }) {
     final productId = XmlPath.getChildText(service, 'PRODUCT_ID');
     final title = XmlPath.getTextByPath(service, 'SERVICE_DETAILS/TITLE');
     final city = XmlPath.getTextByPath(
@@ -40,12 +116,19 @@ class ServiceTitleBuilder {
     if (productId != null && productId.trim().isNotEmpty) {
       parts.add('ID: $productId');
     }
-    if (startDate != null && startDate.trim().isNotEmpty) {
+    if (includeStartDate &&
+        startDate != null &&
+        startDate.trim().isNotEmpty) {
       parts.add('Start: ${_shortDate(startDate)}');
     }
     if (title != null && title.trim().isNotEmpty) parts.add(title);
 
     return parts.isNotEmpty ? parts.join(' | ') : 'SERVICE #${index + 1}';
+  }
+
+  static String _text(String? value, {required String fallback}) {
+    final trimmed = value?.trim() ?? '';
+    return trimmed.isEmpty ? fallback : trimmed;
   }
 
   static String _buildCategory(
@@ -69,5 +152,5 @@ class ServiceTitleBuilder {
   }
 
   static String _shortDate(String value) =>
-      value.length >= 10 ? value.substring(0, 10) : value;
+      DateFieldRules.formatForUi(value);
 }

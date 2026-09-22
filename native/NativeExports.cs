@@ -42,7 +42,7 @@ public static class NativeExports
                 return 2;
             }
 
-            var xmlDoc = LoadXml(xmlPath);
+            var xmlDoc = LoadXmlIgnoringDeclaredEncoding(xmlPath);
             var schemas = new XmlSchemaSet();
             schemas.Add(null, schemaPath);
 
@@ -60,26 +60,13 @@ public static class NativeExports
     }
 
     /// <summary>
-    /// Loads OpenQCat XML that often declares encoding="iso-8859-15".
-    /// Falls back to Latin-1 style decoding if the runtime encoding is unavailable.
+    /// NativeAOT / XmlReader cannot honor encoding="iso-8859-15".
+    /// Decode bytes first, rewrite the declaration, then parse.
     /// </summary>
-    private static XDocument LoadXml(string path)
+    private static XDocument LoadXmlIgnoringDeclaredEncoding(string path)
     {
-        try
-        {
-            return XDocument.Load(path);
-        }
-        catch (ArgumentException)
-        {
-            // e.g. "System does not support 'iso-8859-15' encoding"
-        }
-        catch (NotSupportedException)
-        {
-        }
-
         var bytes = File.ReadAllBytes(path);
         var text = DecodeOpenQBytes(bytes);
-        // Declaration may still say iso-8859-15 while content is now Unicode string.
         text = System.Text.RegularExpressions.Regex.Replace(
             text,
             @"encoding\s*=\s*[""'][^""']+[""']",
@@ -93,6 +80,15 @@ public static class NativeExports
     {
         if (bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF)
             return Encoding.UTF8.GetString(bytes, 3, bytes.Length - 3);
+
+        try
+        {
+            return new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true)
+                .GetString(bytes);
+        }
+        catch (DecoderFallbackException)
+        {
+        }
 
         try
         {

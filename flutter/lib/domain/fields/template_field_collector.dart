@@ -2,6 +2,7 @@ import 'package:xml/xml.dart';
 
 import '../../data/xml/xml_path.dart';
 import '../catalog/models.dart';
+import 'field_labels.dart';
 import 'important_fields.dart';
 import 'template_field_definitions.dart';
 
@@ -103,15 +104,5 @@ class TemplateFieldCollector {
     return false;
   }
 
-  static String _formatLabel(String path) {
-    if (path.contains('@')) {
-      final parts = path.split('@');
-      final element = parts[0].split('/').last;
-      return '${_toWords(element)} (${parts[1]})';
-    }
-    return _toWords(path.split('/').last);
-  }
-
-  static String _toWords(String name) =>
-      name.split('_').where((p) => p.isNotEmpty).join(' ');
+  static String _formatLabel(String path) => FieldLabels.forPath(path);
 }

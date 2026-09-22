@@ -6,13 +6,19 @@ import 'package:xml/xml.dart';
 import '../../app/editor_controller.dart';
 import '../../debug/xml_file_diff.dart';
 import '../../data/xml/xml_path.dart';
+import '../../domain/catalog/catalog_session.dart';
+import '../../domain/catalog/course_list_filter.dart';
 import '../../domain/catalog/models.dart';
 import '../../domain/dates/date_field_rules.dart';
 import '../../domain/fields/important_fields.dart';
 import '../../domain/fields/template_field_collector.dart';
+import '../dialogs/angebot_wizard_dialog.dart';
 import '../dialogs/common_dialogs.dart';
 import '../dialogs/service_dialogs.dart';
+import '../widgets/course_list_filter_bar.dart';
 import '../widgets/field_grid.dart';
+import '../widgets/grouped_field_form.dart';
+import '../widgets/quick_edit_form.dart';
 
 class ServiceEditorPage extends StatefulWidget {
   const ServiceEditorPage({super.key, required this.controller});
@@ -23,17 +29,22 @@ class ServiceEditorPage extends StatefulWidget {
   State<ServiceEditorPage> createState() => _ServiceEditorPageState();
 }
 
-class _ServiceEditorPageState extends State<ServiceEditorPage> {
+class _ServiceEditorPageState extends State<ServiceEditorPage>
+    with SingleTickerProviderStateMixin {
   EditorController get c => widget.controller;
+  late final TabController _courseTabs;
 
   @override
   void initState() {
     super.initState();
     c.addListener(_onChanged);
+    _courseTabs = TabController(length: 2, vsync: this);
+    _courseTabs.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
+    _courseTabs.dispose();
     c.removeListener(_onChanged);
     super.dispose();
   }
@@ -48,6 +59,14 @@ class _ServiceEditorPageState extends State<ServiceEditorPage> {
     if (result == null || result.files.single.path == null) return;
     try {
       c.loadXml(result.files.single.path!);
+      if (!mounted) return;
+      if (c.lastXsdError != null) {
+        _showError(c.lastXsdError!);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('XML geladen, XSD-Prüfung erfolgreich.')),
+        );
+      }
     } catch (e) {
       if (mounted) _showError('$e');
     }
@@ -147,12 +166,52 @@ class _ServiceEditorPageState extends State<ServiceEditorPage> {
       _showError('Bitte zuerst XML öffnen.');
       return;
     }
-    if (c.selectedService == null) {
-      _showError('Bitte ein Bildungsangebot auswählen.');
-      return;
+
+    XmlElement? source = c.selectedService != null &&
+            CatalogSession.isAngebot(c.selectedService!)
+        ? c.selectedService
+        : null;
+    if (source == null) {
+      source = await showAngebotPickerDialog(
+        context,
+        angebote: c.sortedAngebote
+            .map((e) => (service: e.service, title: e.title))
+            .toList(),
+        preselected: c.resolveAngebot(c.selectedService),
+      );
+      if (source == null) return;
     }
+    if (!mounted) return;
+
+    final locations = c.profiles.loadLocations();
+    final courseTypes = c.profiles
+        .loadCourseTypes()
+        .where((t) => !t.name.toLowerCase().contains('extern'))
+        .toList();
+
+    final educationType = XmlPath.getTextByPath(
+          source,
+          'SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/EXTENDED_INFO/EDUCATION_TYPE',
+        ) ??
+        '';
+    final isExtern = educationType.toLowerCase().contains('nachholen') ||
+        educationType.toLowerCase().contains('extern');
+
+    final result = await showAddTerminDialog(
+      context,
+      locations: locations,
+      courseTypes: courseTypes,
+      showCourseType: !isExtern,
+    );
+    if (result == null) return;
+    if (!mounted) return;
     try {
-      c.addVeranstaltung();
+      c.addVeranstaltung(
+        source: source,
+        location: result.location,
+        courseType: result.courseType,
+      );
+      _courseTabs.animateTo(0);
     } catch (e) {
       _showError('$e');
     }
@@ -163,23 +222,21 @@ class _ServiceEditorPageState extends State<ServiceEditorPage> {
       _showError('Bitte zuerst XML öffnen.');
       return;
     }
-    final locations = c.profiles.loadLocations();
-    final courseTypes = c.profiles
-        .loadCourseTypes()
-        .where((t) => !t.name.toLowerCase().contains('extern'))
-        .toList();
-    final result = await showCreateServiceDialog(
+    final result = await showAngebotWizardDialog(
       context,
-      locations: locations,
-      courseTypes: courseTypes,
+      existingAngebote: c.session
+          .getServiceNodes()
+          .where(CatalogSession.isAngebot)
+          .toList(),
     );
     if (result == null) return;
+    if (!mounted) return;
     try {
       c.createService(
-        location: result.location,
         mainVariant: result.variant,
-        courseType: result.courseType,
+        values: result.values,
       );
+      _courseTabs.animateTo(1);
     } catch (e) {
       _showError('$e');
     }
@@ -309,7 +366,10 @@ class _ServiceEditorPageState extends State<ServiceEditorPage> {
   }
 
   List<FieldGridRow> _quickRows(XmlElement service) {
-    return ImportantFields.list.map((field) {
+    final fields = ImportantFields.forService(
+      isAngebot: CatalogSession.isAngebot(service),
+    );
+    return fields.map((field) {
       final value = XmlPath.getTextByPath(service, field.path) ?? '';
       FieldRowColor color = FieldRowColor.normal;
       final pending = c.session.pendingTemplateFields[service];
@@ -326,7 +386,9 @@ class _ServiceEditorPageState extends State<ServiceEditorPage> {
         color: color,
         isDate: DateFieldRules.isDatePath(field.path),
         tooltip: c.reference.tooltipFor(field.path, value),
-        displayValue: c.reference.displayFor(field.path, value),
+        displayValue: DateFieldRules.isDatePath(field.path)
+            ? DateFieldRules.formatForUi(value)
+            : c.reference.displayFor(field.path, value),
       );
     }).toList();
   }
@@ -344,7 +406,9 @@ class _ServiceEditorPageState extends State<ServiceEditorPage> {
         color: FieldRowColor.normal,
         isDate: DateFieldRules.isDatePath(field.path),
         tooltip: c.reference.tooltipFor(field.path, coded),
-        displayValue: c.reference.displayFor(field.path, coded),
+        displayValue: DateFieldRules.isDatePath(field.path)
+            ? DateFieldRules.formatForUi(value)
+            : c.reference.displayFor(field.path, coded),
       );
     }).toList();
   }
@@ -473,192 +537,64 @@ class _ServiceEditorPageState extends State<ServiceEditorPage> {
 
   @override
   Widget build(BuildContext context) {
-    final courses = c.sortedCourses;
     final selected = c.selectedService;
 
     return Padding(
       padding: const EdgeInsets.all(12),
-      child: Column(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              FilledButton.icon(
-                onPressed: _openXml,
-                icon: const Icon(Icons.folder_open),
-                label: const Text('XML öffnen'),
-              ),
-              FilledButton.tonalIcon(
-                onPressed: _exportXml,
-                icon: const Icon(Icons.save_alt),
-                label: const Text('Exportieren'),
-              ),
-              OutlinedButton.icon(
-                onPressed: _validateXml,
-                icon: const Icon(Icons.rule),
-                label: const Text('Gegen XSD prüfen'),
-              ),
-              OutlinedButton.icon(
-                onPressed: _validateKursnet,
-                icon: const Icon(Icons.fact_check),
-                label: const Text('KURSNET-Regeln'),
-              ),
-              OutlinedButton.icon(
-                onPressed: _uploadKursnet,
-                icon: const Icon(Icons.cloud_upload),
-                label: const Text('KURSNET-Upload'),
-              ),
-              OutlinedButton(
-                onPressed: _createService,
-                child: const Text('Neues Angebot'),
-              ),
-              OutlinedButton(
-                onPressed: _addVeranstaltung,
-                child: const Text('Termin zum Angebot'),
-              ),
-              OutlinedButton(
-                onPressed: _copyWith,
-                child: const Text('Kopieren mit…'),
-              ),
-              OutlinedButton(
-                onPressed: _deleteService,
-                child: const Text('Service Löschen'),
-              ),
-              if (kDebugMode)
-                OutlinedButton.icon(
-                  onPressed: _compareXmlFiles,
-                  icon: const Icon(Icons.compare_arrows),
-                  label: const Text('XML vergleichen'),
-                ),
-            ],
-          ),
-          if (c.statusMessage != null) ...[
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                c.statusMessage!,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ),
-          ],
-          const SizedBox(height: 12),
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SizedBox(
-                  width: 380,
-                  child: Card(
-                    clipBehavior: Clip.antiAlias,
-                    child: ListView.builder(
-                      itemCount: courses.length,
-                      itemBuilder: (context, index) {
-                        final item = courses[index];
-                        final isSelected =
-                            identical(item.service, selected);
-                        return ListTile(
-                          selected: isSelected,
-                          dense: true,
-                          contentPadding: EdgeInsets.only(
-                            left: item.isVeranstaltung ? 28 : 12,
-                            right: 12,
-                          ),
-                          title: Text(
-                            item.title,
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                          onTap: () => c.selectService(item.service),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: selected == null
-                      ? const Center(
-                          child: Text('Service auswählen oder XML öffnen'),
-                        )
-                      : Column(
-                          children: [
-                            const Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                'Schnellbearbeitung',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            SizedBox(
-                              height: 220,
-                              child: Card(
-                                clipBehavior: Clip.antiAlias,
-                                child: FieldGrid(
-                                  rows: _quickRows(selected),
-                                  onEdit: (row, _) =>
-                                      _editRow(selected, row),
-                                  onDateTap: (row) =>
-                                      _editRow(selected, row),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                'Alle gefüllten Felder',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Expanded(
-                              child: Card(
-                                clipBehavior: Clip.antiAlias,
-                                child: FieldGrid(
-                                  rows: _detailRows(selected),
-                                  onEdit: (row, _) =>
-                                      _editRow(selected, row),
-                                  onDateTap: (row) =>
-                                      _editRow(selected, row),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
           SizedBox(
-            height: 140,
-            child: DefaultTabController(
-              length: 3,
+            width: 400,
+            child: Card(
+              clipBehavior: Clip.antiAlias,
               child: Column(
                 children: [
                   TabBar(
+                    controller: _courseTabs,
                     tabs: [
                       Tab(
-                        text:
-                            'Neu hinzugefügt (${c.newServiceTitles.length})',
+                        text: _countLabel(
+                          'Kurse',
+                          c.visibleCourses.length,
+                          c.sortedCourses.length,
+                        ),
                       ),
                       Tab(
-                        text:
-                            'Geändert / Update (${c.updatedServiceTitles.length})',
-                      ),
-                      Tab(
-                        text: 'Gelöscht (${c.deletedServiceTitles.length})',
+                        text: _countLabel(
+                          'Angebote',
+                          c.visibleAngebote.length,
+                          c.sortedAngebote.length,
+                        ),
                       ),
                     ],
                   ),
+                  CourseListFilterBar(
+                    filter: c.courseFilter,
+                    cities: c.filterCities,
+                    startDates: c.filterStartDates,
+                    onChanged: c.setCourseFilter,
+                    onClear: c.clearCourseFilter,
+                    includeDateFilters: _courseTabs.index == 0,
+                  ),
+                  const Divider(height: 1),
                   Expanded(
                     child: TabBarView(
+                      controller: _courseTabs,
                       children: [
-                        _StatusList(items: c.newServiceTitles),
-                        _StatusList(items: c.updatedServiceTitles),
-                        _StatusList(items: c.deletedServiceTitles),
+                        _CourseList(
+                          items: c.visibleCourses,
+                          selected: selected,
+                          onSelect: c.selectService,
+                          emptyLabel: 'Keine Kurse für diesen Filter',
+                        ),
+                        _CourseList(
+                          items: c.visibleAngebote,
+                          selected: selected,
+                          onSelect: c.selectService,
+                          colorByKind: true,
+                          emptyLabel: 'Keine Angebote für diesen Filter',
+                        ),
                       ],
                     ),
                   ),
@@ -666,10 +602,387 @@ class _ServiceEditorPageState extends State<ServiceEditorPage> {
               ),
             ),
           ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _ActionToolbar(
+                  onOpenXml: _openXml,
+                  onExportXml: _exportXml,
+                  onValidateXml: _validateXml,
+                  onValidateKursnet: _validateKursnet,
+                  onUploadKursnet: _uploadKursnet,
+                  onCreateService: _createService,
+                  onAddTermin: _addVeranstaltung,
+                  onCopyWith: _copyWith,
+                  onDelete: _deleteService,
+                  onCompareXml: kDebugMode ? _compareXmlFiles : null,
+                ),
+                if (c.statusMessage != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    c.statusMessage!,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+                const SizedBox(height: 10),
+                if (selected == null)
+                  const Expanded(
+                    child: Center(
+                      child: Text('Service auswählen oder XML öffnen'),
+                    ),
+                  )
+                else ...[
+                  const Text(
+                    'Schnellbearbeitung',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 6),
+                  QuickEditForm(
+                    rows: _quickRows(selected),
+                    onEdit: (row) => _editRow(selected, row),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Alle gefüllten Felder',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 6),
+                  Expanded(
+                    child: Card(
+                      clipBehavior: Clip.antiAlias,
+                      child: GroupedFieldForm(
+                        rows: _detailRows(selected),
+                        onEdit: (row) => _editRow(selected, row),
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 120,
+                  child: DefaultTabController(
+                    length: 3,
+                    child: Column(
+                      children: [
+                        TabBar(
+                          tabs: [
+                            Tab(
+                              text: 'Neu (${c.newServiceTitles.length})',
+                            ),
+                            Tab(
+                              text:
+                                  'Update (${c.updatedServiceTitles.length})',
+                            ),
+                            Tab(
+                              text:
+                                  'Gelöscht (${c.deletedServiceTitles.length})',
+                            ),
+                          ],
+                        ),
+                        Expanded(
+                          child: TabBarView(
+                            children: [
+                              _StatusList(items: c.newServiceTitles),
+                              _StatusList(items: c.updatedServiceTitles),
+                              _StatusList(items: c.deletedServiceTitles),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
+
+  String _countLabel(String label, int visible, int total) =>
+      visible == total ? '$label ($visible)' : '$label ($visible/$total)';
+}
+
+class _ActionToolbar extends StatelessWidget {
+  const _ActionToolbar({
+    required this.onOpenXml,
+    required this.onExportXml,
+    required this.onValidateXml,
+    required this.onValidateKursnet,
+    required this.onUploadKursnet,
+    required this.onCreateService,
+    required this.onAddTermin,
+    required this.onCopyWith,
+    required this.onDelete,
+    this.onCompareXml,
+  });
+
+  final VoidCallback onOpenXml;
+  final VoidCallback onExportXml;
+  final VoidCallback onValidateXml;
+  final VoidCallback onValidateKursnet;
+  final VoidCallback onUploadKursnet;
+  final VoidCallback onCreateService;
+  final VoidCallback onAddTermin;
+  final VoidCallback onCopyWith;
+  final VoidCallback onDelete;
+  final VoidCallback? onCompareXml;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _ActionGroup(
+          label: 'Datei',
+          color: const Color(0xFF1B4F72),
+          children: [
+            _groupButton(
+              color: const Color(0xFF1B4F72),
+              icon: Icons.folder_open,
+              label: 'XML öffnen',
+              onPressed: onOpenXml,
+            ),
+            _groupButton(
+              color: const Color(0xFF1B4F72),
+              icon: Icons.save_alt,
+              label: 'Exportieren',
+              onPressed: onExportXml,
+            ),
+          ],
+        ),
+        _ActionGroup(
+          label: 'Prüfung',
+          color: const Color(0xFF0E6655),
+          children: [
+            _groupButton(
+              color: const Color(0xFF0E6655),
+              icon: Icons.rule,
+              label: 'XSD',
+              onPressed: onValidateXml,
+            ),
+            _groupButton(
+              color: const Color(0xFF0E6655),
+              icon: Icons.fact_check,
+              label: 'KURSNET',
+              onPressed: onValidateKursnet,
+            ),
+            _groupButton(
+              color: const Color(0xFF0E6655),
+              icon: Icons.cloud_upload,
+              label: 'Upload',
+              onPressed: onUploadKursnet,
+            ),
+          ],
+        ),
+        _ActionGroup(
+          label: 'Katalog',
+          color: const Color(0xFF6C3483),
+          children: [
+            _groupButton(
+              color: const Color(0xFF6C3483),
+              icon: Icons.add_box_outlined,
+              label: 'Neues Angebot',
+              onPressed: onCreateService,
+            ),
+            _groupButton(
+              color: const Color(0xFF6C3483),
+              icon: Icons.event_available,
+              label: 'Termin zum Angebot',
+              onPressed: onAddTermin,
+            ),
+            _groupButton(
+              color: const Color(0xFF6C3483),
+              icon: Icons.copy_all,
+              label: 'Kopieren mit…',
+              onPressed: onCopyWith,
+            ),
+            _groupButton(
+              color: const Color(0xFFB03A2E),
+              icon: Icons.delete_outline,
+              label: 'Löschen',
+              onPressed: onDelete,
+            ),
+          ],
+        ),
+        if (onCompareXml != null)
+          _ActionGroup(
+            label: 'Debug',
+            color: const Color(0xFF5D6D7E),
+            children: [
+              _groupButton(
+                color: const Color(0xFF5D6D7E),
+                icon: Icons.compare_arrows,
+                label: 'XML vergleichen',
+                onPressed: onCompareXml!,
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  Widget _groupButton({
+    required Color color,
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+  }) {
+    return FilledButton.tonalIcon(
+      style: ButtonStyle(
+        backgroundColor: WidgetStatePropertyAll(color.withValues(alpha: 0.12)),
+        foregroundColor: WidgetStatePropertyAll(color),
+        visualDensity: VisualDensity.compact,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      onPressed: onPressed,
+      icon: Icon(icon, size: 18),
+      label: Text(label),
+    );
+  }
+}
+
+class _ActionGroup extends StatelessWidget {
+  const _ActionGroup({
+    required this.label,
+    required this.color,
+    required this.children,
+  });
+
+  final String label;
+  final Color color;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(10),
+        border: Border(left: BorderSide(color: color, width: 3)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: children,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CourseList extends StatelessWidget {
+  const _CourseList({
+    required this.items,
+    required this.selected,
+    required this.onSelect,
+    this.colorByKind = false,
+    this.emptyLabel = 'Keine Einträge für diesen Filter',
+  });
+
+  final List<CourseListEntry> items;
+  final XmlElement? selected;
+  final ValueChanged<XmlElement> onSelect;
+  final bool colorByKind;
+  final String emptyLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) {
+      return Center(
+        child: Text(emptyLabel, textAlign: TextAlign.center),
+      );
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+      itemCount: items.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 6),
+      itemBuilder: (context, index) {
+        final item = items[index];
+        final isSelected = identical(item.service, selected);
+        final color = _courseAccentColor(
+          item.service,
+          byKind: colorByKind,
+        );
+        return Material(
+          color: color.withValues(alpha: isSelected ? 0.16 : 0.05),
+          borderRadius: BorderRadius.circular(8),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: () => onSelect(item.service),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: isSelected ? color : color.withValues(alpha: 0.65),
+                  width: isSelected ? 2 : 1.5,
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+              child: Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      item.title,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight:
+                            isSelected ? FontWeight.w700 : FontWeight.w500,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+Color _courseAccentColor(XmlElement service, {required bool byKind}) {
+  if (byKind || CourseListFilter.cityOf(service).isEmpty) {
+    return CourseListFilter.educationKindOf(service) ==
+            EducationKindFilter.externenpruefung
+        ? const Color(0xFF6C3483)
+        : const Color(0xFF1E8449);
+  }
+  final city = CourseListFilter.cityOf(service).toLowerCase();
+  if (city.contains('leipzig')) return const Color(0xFFB9770E);
+  if (city.contains('kassel')) return const Color(0xFF1B4F72);
+  return const Color(0xFF1A5276);
 }
 
 class _StatusList extends StatelessWidget {

@@ -56,6 +56,7 @@ class AppDataStore {
     }
 
     await _repairStaleTemplates(serviceAssets);
+    await _repairStaleProfiles();
 
     const referenceFiles = [
       'assets/openqcat/reference/Orte.csv',
@@ -183,6 +184,23 @@ class AppDataStore {
       );
     } catch (_) {
       // Keep existing files if repair fails.
+    }
+  }
+
+  Future<void> _repairStaleProfiles() async {
+    final destPath = p.join(profilesFolder, 'locations.xml');
+    final dest = File(destPath);
+    if (!dest.existsSync()) return;
+    try {
+      final text = await dest.readAsString();
+      if (text.contains('ADDRESS_REMARKS')) return;
+      await _copyAsset(
+        'assets/openqcat/templates/profiles/locations.xml',
+        destPath,
+        overwrite: true,
+      );
+    } catch (_) {
+      // Keep existing profile if repair fails.
     }
   }
 

@@ -96,7 +96,11 @@ class CatalogSession {
         .toList();
   }
 
-  XmlElement addServiceFromConfiguredTemplate(XmlDocument configuredTemplate) {
+  XmlElement addServiceFromConfiguredTemplate(
+    XmlDocument configuredTemplate, {
+    bool applyDateDefaults = true,
+    Set<String>? pendingFields,
+  }) {
     _ensureLoaded();
     final imported = configuredTemplate.rootElement.copy();
 
@@ -112,17 +116,21 @@ class CatalogSession {
     insertParent.children.add(imported);
 
     serviceStates[imported] = ServiceState.neu;
-    pendingTemplateFields[imported] =
+    pendingTemplateFields[imported] = pendingFields ??
         importantFields.map((f) => f.path).toSet();
-    _applyStartDateDefaults(imported);
+    if (applyDateDefaults) {
+      _applyStartDateDefaults(imported);
+    }
     return imported;
   }
 
   XmlElement copyServiceWithConfiguration(
     XmlElement sourceService,
     LocationProfile location,
-    CourseTypeProfile? courseType,
-  ) {
+    CourseTypeProfile? courseType, {
+    XmlElement? locationSource,
+    XmlElement? courseTypeSource,
+  }) {
     _ensureLoaded();
     final insertParent = _getServiceInsertParent();
     if (insertParent == null) {
@@ -135,9 +143,17 @@ class CatalogSession {
     _syncCourseIdWithProductId(copied);
     _applyServiceModeForWorkingCopy(copied);
 
-    TemplateConfigurator.applyLocationToService(copied, location);
+    TemplateConfigurator.applyLocationToService(
+      copied,
+      location,
+      locationSource: locationSource,
+    );
     if (courseType != null) {
-      TemplateConfigurator.applyCourseTypeToService(copied, courseType);
+      TemplateConfigurator.applyCourseTypeToService(
+        copied,
+        courseType,
+        courseTypeSource: courseTypeSource,
+      );
     }
 
     insertParent.children.add(copied);
@@ -156,12 +172,27 @@ class CatalogSession {
     return (education?.getAttribute('type') ?? 'true').toLowerCase() == 'true';
   }
 
+  /// Kurse-Liste: echte Termine und nur Stämme, die selbst einen Start haben.
+  static bool isListTermin(XmlElement service) {
+    if (!isAngebot(service)) return true;
+    return DateFieldRules.tryParse(
+          XmlPath.getTextByPath(service, DateFieldRules.courseStartPath),
+        ) !=
+        null;
+  }
+
   static String? educationCourseId(XmlElement service) => XmlPath.getTextByPath(
         service,
         'SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/COURSE_ID',
       );
 
-  XmlElement addVeranstaltungFrom(XmlElement source) {
+  XmlElement addVeranstaltungFrom(
+    XmlElement source, {
+    LocationProfile? location,
+    CourseTypeProfile? courseType,
+    XmlElement? locationSource,
+    XmlElement? courseTypeSource,
+  }) {
     _ensureLoaded();
     final insertParent = _getServiceInsertParent();
     if (insertParent == null) {
@@ -192,14 +223,30 @@ class CatalogSession {
     XmlPath.setChildText(education, 'COURSE_ID', parentProductId);
     _applyServiceModeForWorkingCopy(copied);
 
+    if (location != null) {
+      TemplateConfigurator.applyLocationToService(
+        copied,
+        location,
+        locationSource: locationSource,
+      );
+    }
+    if (courseType != null) {
+      TemplateConfigurator.applyCourseTypeToService(
+        copied,
+        courseType,
+        courseTypeSource: courseTypeSource,
+      );
+    }
+
     insertParent.children.add(copied);
     serviceStates[copied] = ServiceState.neu;
     pendingTemplateFields[copied] = {
-      'SERVICE_DETAILS/SERVICE_DATE/START_DATE',
-      'SERVICE_DETAILS/SERVICE_DATE/END_DATE',
-      'SERVICE_DETAILS/ANNOUNCEMENT/START_DATE',
-      'SERVICE_DETAILS/ANNOUNCEMENT/END_DATE',
+      DateFieldRules.courseStartPath,
+      DateFieldRules.courseEndPath,
+      DateFieldRules.announcementStartPath,
+      DateFieldRules.announcementEndPath,
     };
+    _applyStartDateDefaults(copied);
     return copied;
   }
 

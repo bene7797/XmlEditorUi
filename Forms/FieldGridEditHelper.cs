@@ -91,7 +91,7 @@ public static class FieldValueFormatter
             return value;
 
         if (path != null && DateFieldHelper.IsDatePath(path))
-            return value;
+            return DateFieldHelper.FormatForUi(value);
 
         const int maxPreview = 120;
         var singleLine = value.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');

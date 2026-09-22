@@ -111,15 +111,17 @@ public class XmlFieldDescriptor : PropertyDescriptor
 
     public override object? GetValue(object? component)
     {
-        if (node is XmlAttribute attr)
-            return attr.Value;
-
-        return node.InnerText;
+        var raw = node is XmlAttribute attr ? attr.Value : node.InnerText;
+        if (DateFieldHelper.IsDatePath(Name))
+            return DateFieldHelper.FormatForUi(raw);
+        return raw;
     }
 
     public override void SetValue(object? component, object? value)
     {
         var newValue = value?.ToString() ?? "";
+        if (DateFieldHelper.IsDatePath(Name) && DateFieldHelper.TryParse(newValue, out var date))
+            newValue = DateFieldHelper.Format(date, DateFieldHelper.IsCourseDatePath(Name));
 
         if (node is XmlAttribute attr)
             attr.Value = newValue;

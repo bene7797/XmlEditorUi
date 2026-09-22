@@ -26,7 +26,9 @@ public class TemplateFieldMapping
         { "ZIPBOX", "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/ZIPBOX" },
         { "CITY", "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/CITY" },
         { "STATE", "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/STATE" },
+        { "COUNTRY", "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/COUNTRY" },
         { "PHONE", "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/PHONE" },
+        { "MOBILE", "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/MOBILE" },
         { "EMAIL", "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/EMAILS/EMAIL" },
         { "URL", "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/URL" },
         { "ADDRESS_REMARKS", "SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/ADDRESS_REMARKS" },
@@ -60,6 +62,54 @@ public class TemplateFieldMapping
     /// Nützlich für Fields wie type="7" in den XML-Elementen.
     /// </summary>
     public static bool IsAttributeField(string fieldName) => fieldName.Contains("@");
+
+    public static string? LookupValue(IDictionary<string, string> values, string canonicalKey)
+    {
+        var wanted = CompactKey(canonicalKey);
+        foreach (var pair in values)
+        {
+            if (CanonicalKey(pair.Key) == wanted)
+                return pair.Value;
+        }
+
+        return null;
+    }
+
+    private static readonly Dictionary<string, string> FieldKeyAliases = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["ADRESS BEMERKUNGEN"] = "ADDRESS_REMARKS",
+        ["ADRESSBEMERKUNGEN"] = "ADDRESS_REMARKS",
+        ["ADRESSBEMERKUNG"] = "ADDRESS_REMARKS",
+        ["ADDRESS_REMARK"] = "ADDRESS_REMARKS",
+        ["STRASSE"] = "STREET",
+        ["STRAßE"] = "STREET",
+        ["STADT"] = "CITY",
+        ["BUNDESLAND"] = "STATE",
+        ["TELEFON"] = "PHONE",
+        ["HANDY"] = "MOBILE",
+        ["MOBIL"] = "MOBILE",
+        ["PLZ POSTFACH"] = "ZIPBOX",
+        ["PLZ_POSTFACH"] = "ZIPBOX",
+        ["LAND"] = "COUNTRY",
+        ["E-MAIL"] = "EMAIL",
+        ["MAIL"] = "EMAIL",
+        ["BESCHÄFTIGUNGSART"] = "INSTRUCTION_TIME",
+        ["BESCHAEFTIGUNGSART"] = "INSTRUCTION_TIME",
+        ["UNTERRICHTSZEIT"] = "INSTRUCTION_TIME",
+        ["DAUER"] = "DURATION",
+        ["UNTERRICHTS BEMERKUNGEN"] = "INSTRUCTION_REMARKS",
+        ["UNTERRICHTSBEMERKUNGEN"] = "INSTRUCTION_REMARKS",
+        ["BILDUNGSART"] = "EDUCATION_TYPE",
+    };
+
+    private static string CanonicalKey(string raw)
+    {
+        var upper = raw.Trim().ToUpperInvariant();
+        return CompactKey(FieldKeyAliases.TryGetValue(upper, out var alias) ? alias : upper);
+    }
+
+    private static string CompactKey(string value) =>
+        value.ToUpperInvariant().Replace(" ", "").Replace("_", "");
 
     /// <summary>
     /// Extrahiert den Element-Namen und Attribute-Namen aus einem Field-Namen.

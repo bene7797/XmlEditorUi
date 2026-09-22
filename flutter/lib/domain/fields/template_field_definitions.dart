@@ -39,6 +39,10 @@ class LocationTemplateFields {
       'SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/PHONE',
     ),
     TemplateFieldDefinition(
+      'Mobil',
+      'SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/MOBILE',
+    ),
+    TemplateFieldDefinition(
       'Email',
       'SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/LOCATION/EMAILS/EMAIL',
     ),
@@ -60,24 +64,24 @@ class CourseTypeTemplateFields {
       'SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/EXTENDED_INFO/INSTRUCTION_TIME',
     ),
     TemplateFieldDefinition(
-      'Beschäftigungsart (type)',
+      'Beschäftigungsart-Code',
       'SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/EXTENDED_INFO/INSTRUCTION_TIME@type',
     ),
     TemplateFieldDefinition(
-      'Dauer (type)',
+      'Dauer-Code',
       'SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/DURATION@type',
     ),
     TemplateFieldDefinition(
-      'Instruction Remarks',
+      'Unterrichtsbemerkungen',
       'SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/MODULE_COURSE/INSTRUCTION_REMARKS',
     ),
-    TemplateFieldDefinition('Course Type', 'COURSE_TYPE'),
+    TemplateFieldDefinition('Kurstyp', 'COURSE_TYPE'),
     TemplateFieldDefinition(
-      'Education (Angebot/Termin)',
+      'Angebot oder Termin',
       'SERVICE_DETAILS/SERVICE_MODULE/EDUCATION@type',
     ),
     TemplateFieldDefinition(
-      'Education Type',
+      'Bildungsart',
       'SERVICE_DETAILS/SERVICE_MODULE/EDUCATION/EXTENDED_INFO/EDUCATION_TYPE',
     ),
   ];
@@ -85,191 +89,188 @@ class CourseTypeTemplateFields {
 
 class HeaderTemplateFields {
   static const List<TemplateFieldDefinition> essentialFields = [
-    TemplateFieldDefinition('Generator Info', 'HEADER/GENERATOR_INFO'),
-    TemplateFieldDefinition('Catalog Language', 'HEADER/CATALOG/LANGUAGE'),
-    TemplateFieldDefinition('Catalog ID', 'HEADER/CATALOG/CATALOG_ID'),
-    TemplateFieldDefinition('Catalog Version', 'HEADER/CATALOG/CATALOG_VERSION'),
-    TemplateFieldDefinition('Catalog Name', 'HEADER/CATALOG/CATALOG_NAME'),
+    TemplateFieldDefinition('Generator', 'HEADER/GENERATOR_INFO'),
+    TemplateFieldDefinition('Katalogsprache', 'HEADER/CATALOG/LANGUAGE'),
+    TemplateFieldDefinition('Katalog-ID', 'HEADER/CATALOG/CATALOG_ID'),
+    TemplateFieldDefinition('Katalogversion', 'HEADER/CATALOG/CATALOG_VERSION'),
+    TemplateFieldDefinition('Katalogname', 'HEADER/CATALOG/CATALOG_NAME'),
+    TemplateFieldDefinition('Erstellungsdatum', 'HEADER/CATALOG/GENERATION_DATE'),
     TemplateFieldDefinition(
-      'Generation Date',
-      'HEADER/CATALOG/GENERATION_DATE',
-    ),
-    TemplateFieldDefinition(
-      'Creator First Name',
+      'Ersteller Vorname',
       'HEADER/DOCUMENT_CREATOR/FIRST_NAME',
     ),
     TemplateFieldDefinition(
-      'Creator Last Name',
+      'Ersteller Nachname',
       'HEADER/DOCUMENT_CREATOR/LAST_NAME',
     ),
-    TemplateFieldDefinition('Creator Phone', 'HEADER/DOCUMENT_CREATOR/PHONE'),
-    TemplateFieldDefinition('Creator ID', 'HEADER/DOCUMENT_CREATOR/ID_DB'),
+    TemplateFieldDefinition('Ersteller Telefon', 'HEADER/DOCUMENT_CREATOR/PHONE'),
+    TemplateFieldDefinition('Ersteller-ID', 'HEADER/DOCUMENT_CREATOR/ID_DB'),
     TemplateFieldDefinition(
-      'Creator Address Name',
+      'Ersteller Name',
       'HEADER/DOCUMENT_CREATOR/ADDRESS/NAME',
     ),
     TemplateFieldDefinition(
-      'Creator Address Street',
+      'Ersteller Strasse',
       'HEADER/DOCUMENT_CREATOR/ADDRESS/STREET',
     ),
     TemplateFieldDefinition(
-      'Creator Address ZIP',
+      'Ersteller PLZ',
       'HEADER/DOCUMENT_CREATOR/ADDRESS/ZIP',
     ),
     TemplateFieldDefinition(
-      'Creator Address City',
+      'Ersteller Stadt',
       'HEADER/DOCUMENT_CREATOR/ADDRESS/CITY',
     ),
     TemplateFieldDefinition(
-      'Creator Address Country',
+      'Ersteller Land',
       'HEADER/DOCUMENT_CREATOR/ADDRESS/COUNTRY',
     ),
     TemplateFieldDefinition(
-      'Creator Address URL',
+      'Ersteller URL',
       'HEADER/DOCUMENT_CREATOR/ADDRESS/URL',
     ),
     TemplateFieldDefinition(
-      'Creator Address ID',
+      'Ersteller Adress-ID',
       'HEADER/DOCUMENT_CREATOR/ADDRESS/ID_DB',
     ),
     TemplateFieldDefinition(
-      'Creator Contact Remarks',
+      'Ersteller Bemerkungen',
       'HEADER/DOCUMENT_CREATOR/CONTACT_REMARKS',
     ),
-    TemplateFieldDefinition('Recipient ID', 'HEADER/RECIPIENT/RECIPIENT_ID'),
-    TemplateFieldDefinition('Recipient Name', 'HEADER/RECIPIENT/RECIPIENT_NAME'),
+    TemplateFieldDefinition('Empfänger-ID', 'HEADER/RECIPIENT/RECIPIENT_ID'),
+    TemplateFieldDefinition('Empfänger Name', 'HEADER/RECIPIENT/RECIPIENT_NAME'),
     TemplateFieldDefinition(
-      'Recipient Address Name',
+      'Empfänger Adresse',
       'HEADER/RECIPIENT/ADDRESS/NAME',
     ),
     TemplateFieldDefinition(
-      'Recipient Address Street',
+      'Empfänger Strasse',
       'HEADER/RECIPIENT/ADDRESS/STREET',
     ),
     TemplateFieldDefinition(
-      'Recipient Address ZIP',
+      'Empfänger PLZ',
       'HEADER/RECIPIENT/ADDRESS/ZIP',
     ),
     TemplateFieldDefinition(
-      'Recipient Address City',
+      'Empfänger Stadt',
       'HEADER/RECIPIENT/ADDRESS/CITY',
     ),
     TemplateFieldDefinition(
-      'Recipient Address Country',
+      'Empfänger Land',
       'HEADER/RECIPIENT/ADDRESS/COUNTRY',
     ),
     TemplateFieldDefinition(
-      'Recipient Address URL',
+      'Empfänger URL',
       'HEADER/RECIPIENT/ADDRESS/URL',
     ),
-    TemplateFieldDefinition('Supplier ID', 'HEADER/SUPPLIER/SUPPLIER_ID'),
-    TemplateFieldDefinition('Supplier Name', 'HEADER/SUPPLIER/SUPPLIER_NAME'),
+    TemplateFieldDefinition('Anbieter-ID', 'HEADER/SUPPLIER/SUPPLIER_ID'),
+    TemplateFieldDefinition('Anbieter Name', 'HEADER/SUPPLIER/SUPPLIER_NAME'),
     TemplateFieldDefinition(
-      'Supplier Address Name',
+      'Anbieter Adresse',
       'HEADER/SUPPLIER/ADDRESS/NAME',
     ),
     TemplateFieldDefinition(
-      'Supplier Address Name2',
+      'Anbieter Adresse 2',
       'HEADER/SUPPLIER/ADDRESS/NAME2',
     ),
     TemplateFieldDefinition(
-      'Supplier Address Street',
+      'Anbieter Strasse',
       'HEADER/SUPPLIER/ADDRESS/STREET',
     ),
     TemplateFieldDefinition(
-      'Supplier Address ZIP',
+      'Anbieter PLZ',
       'HEADER/SUPPLIER/ADDRESS/ZIP',
     ),
     TemplateFieldDefinition(
-      'Supplier Address City',
+      'Anbieter Stadt',
       'HEADER/SUPPLIER/ADDRESS/CITY',
     ),
     TemplateFieldDefinition(
-      'Supplier Address State',
+      'Anbieter Bundesland',
       'HEADER/SUPPLIER/ADDRESS/STATE',
     ),
     TemplateFieldDefinition(
-      'Supplier Address Country',
+      'Anbieter Land',
       'HEADER/SUPPLIER/ADDRESS/COUNTRY',
     ),
     TemplateFieldDefinition(
-      'Supplier Address Phone',
+      'Anbieter Telefon',
       'HEADER/SUPPLIER/ADDRESS/PHONE',
     ),
     TemplateFieldDefinition(
-      'Supplier Address Mobile',
+      'Anbieter Mobil',
       'HEADER/SUPPLIER/ADDRESS/MOBILE',
     ),
     TemplateFieldDefinition(
-      'Supplier Address Email',
+      'Anbieter Email',
       'HEADER/SUPPLIER/ADDRESS/EMAILS/EMAIL',
     ),
     TemplateFieldDefinition(
-      'Supplier Address URL',
+      'Anbieter URL',
       'HEADER/SUPPLIER/ADDRESS/URL',
     ),
     TemplateFieldDefinition(
-      'Supplier Contact Role',
+      'Kontakt Rolle',
       'HEADER/SUPPLIER/CONTACT/CONTACT_ROLE',
     ),
     TemplateFieldDefinition(
-      'Supplier Contact Role (type)',
+      'Kontakt Rolle (Code)',
       'HEADER/SUPPLIER/CONTACT/CONTACT_ROLE@type',
     ),
     TemplateFieldDefinition(
-      'Supplier Contact Salutation',
+      'Kontakt Anrede',
       'HEADER/SUPPLIER/CONTACT/SALUTATION',
     ),
     TemplateFieldDefinition(
-      'Supplier Contact First Name',
+      'Kontakt Vorname',
       'HEADER/SUPPLIER/CONTACT/FIRST_NAME',
     ),
     TemplateFieldDefinition(
-      'Supplier Contact Last Name',
+      'Kontakt Nachname',
       'HEADER/SUPPLIER/CONTACT/LAST_NAME',
     ),
     TemplateFieldDefinition(
-      'Supplier Contact Phone',
+      'Kontakt Telefon',
       'HEADER/SUPPLIER/CONTACT/PHONE',
     ),
     TemplateFieldDefinition(
-      'Supplier Contact Mobile',
+      'Kontakt Mobil',
       'HEADER/SUPPLIER/CONTACT/MOBILE',
     ),
     TemplateFieldDefinition(
-      'Supplier Contact Email',
+      'Kontakt Email',
       'HEADER/SUPPLIER/CONTACT/EMAILS/EMAIL',
     ),
     TemplateFieldDefinition(
-      'Supplier Contact URL',
+      'Kontakt URL',
       'HEADER/SUPPLIER/CONTACT/URL',
     ),
     TemplateFieldDefinition(
-      'Supplier Contact ID',
+      'Kontakt-ID',
       'HEADER/SUPPLIER/CONTACT/ID_DB',
     ),
     TemplateFieldDefinition(
-      'Supplier Contact Remarks',
+      'Kontakt Bemerkungen',
       'HEADER/SUPPLIER/CONTACT/CONTACT_REMARKS',
     ),
     TemplateFieldDefinition(
-      'Supplier Extended Info Input Type',
+      'Anbieter Eingabeart',
       'HEADER/SUPPLIER/EXTENDED_INFO@input_type',
     ),
     TemplateFieldDefinition(
-      'Supplier Institution Number',
+      'Institutionsnummer',
       'HEADER/SUPPLIER/EXTENDED_INFO/INSTITUTION_NUMBER',
     ),
     TemplateFieldDefinition(
-      'Supplier Organizational Form',
+      'Organisationsform',
       'HEADER/SUPPLIER/EXTENDED_INFO/ORGANIZATIONAL_FORM',
     ),
     TemplateFieldDefinition(
-      'Supplier Organizational Form Type',
+      'Organisationsform-Code',
       'HEADER/SUPPLIER/EXTENDED_INFO/ORGANIZATIONAL_FORM@type',
     ),
     TemplateFieldDefinition(
-      'Supplier Standard Company Number',
+      'Betriebsnummer',
       'HEADER/SUPPLIER/EXTENDED_INFO/STANDARD_COMPANY_NUMBER',
     ),
   ];

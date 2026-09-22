@@ -422,6 +422,16 @@ public class MainForm : Form
         serviceManager.LoadXml(dialog.FileName);
         LoadCourses();
         RefreshStatusLists();
+
+        try
+        {
+            var xsdPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "schema.xsd");
+            serviceManager.ValidateWithSchema(dialog.FileName, xsdPath);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("XSD-Prüfung:\n" + ex.Message);
+        }
     }
 
     private void LoadCourses(XmlNode? selectNode = null)
@@ -536,7 +546,7 @@ public class MainForm : Form
             return;
 
         var formatted = DateFieldHelper.Format(popup.SelectedValue, DateFieldHelper.IsCourseDatePath(path));
-        row.Cells[1].Value = formatted;
+        row.Cells[1].Value = FieldValueFormatter.ForGridDisplay(formatted, path);
         selectedCourse.SetNodeByPath(path, formatted);
         serviceManager.MarkFieldAsChanged(selectedCourse, path);
 
@@ -668,10 +678,18 @@ public class MainForm : Form
 
             var configManager = new TemplateConfigurationManager();
             configManager.LoadMainTemplate(mainTemplatePath);
-            configManager.ApplyLocationConfiguration(configForm.SelectedLocation);
+            var city = configForm.SelectedLocation.Values.GetValueOrDefault("CITY")
+                ?? configForm.SelectedLocation.Name;
+            configManager.ApplyLocationConfiguration(
+                configForm.SelectedLocation,
+                templateRepository.FindTemplateByCity(city)?.Service);
 
             if (configForm.SelectedCourseType != null)
-                configManager.ApplyCourseTypeConfiguration(configForm.SelectedCourseType);
+            {
+                configManager.ApplyCourseTypeConfiguration(
+                    configForm.SelectedCourseType,
+                    templateRepository.FindTemplateByFileNameContains(configForm.SelectedCourseType.Name)?.Service);
+            }
 
             serviceManager.AddServiceFromConfiguredTemplate(configManager.GetConfiguredTemplate());
             LoadCourses();

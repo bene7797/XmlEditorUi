@@ -25,6 +25,9 @@ public static class DateFieldHelper
 
         var clean = value.Trim();
 
+        if (TryParseUi(clean, out date))
+            return true;
+
         if (clean.Contains('T'))
         {
             var main = clean.Split('+')[0];
@@ -35,6 +38,48 @@ public static class DateFieldHelper
             clean = clean.Split('+')[0];
 
         return DateTime.TryParse(clean, out date);
+    }
+
+    /// UI-Anzeige: TT.MM.JJJJ (XML bleibt ISO).
+    public static string FormatForUi(string? xmlValue, bool includeTime = false)
+    {
+        if (!TryParse(xmlValue, out var date))
+            return xmlValue?.Trim() ?? "";
+        return FormatUi(date, includeTime);
+    }
+
+    public static string FormatUi(DateTime date, bool includeTime) =>
+        includeTime
+            ? date.ToString("dd.MM.yyyy HH:mm")
+            : date.ToString("dd.MM.yyyy");
+
+    private static bool TryParseUi(string value, out DateTime date)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(
+            value,
+            @"^(\d{1,2})[.\s/-](\d{1,2})[.\s/-](\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$");
+        if (!match.Success)
+        {
+            date = DateTime.Now;
+            return false;
+        }
+
+        var day = int.Parse(match.Groups[1].Value);
+        var month = int.Parse(match.Groups[2].Value);
+        var year = int.Parse(match.Groups[3].Value);
+        var hour = match.Groups[4].Success ? int.Parse(match.Groups[4].Value) : 0;
+        var minute = match.Groups[5].Success ? int.Parse(match.Groups[5].Value) : 0;
+        var second = match.Groups[6].Success ? int.Parse(match.Groups[6].Value) : 0;
+        try
+        {
+            date = new DateTime(year, month, day, hour, minute, second);
+            return true;
+        }
+        catch
+        {
+            date = DateTime.Now;
+            return false;
+        }
     }
 
     public static string Format(DateTime date, bool includeTime) =>

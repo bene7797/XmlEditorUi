@@ -10,10 +10,13 @@ import '../data/kursnet/kursnet_client.dart';
 import '../data/profiles/profile_repository.dart';
 import '../data/reference/openq_reference.dart';
 import '../data/templates/service_template_repository.dart';
+import '../data/xml/xml_file_io.dart';
 import '../data/xml/xml_path.dart';
 import '../domain/catalog/catalog_session.dart';
+import '../domain/catalog/course_list_filter.dart';
 import '../domain/catalog/models.dart';
 import '../domain/dates/date_field_rules.dart';
+import '../domain/fields/important_fields.dart';
 import '../domain/fields/number_input.dart';
 import '../domain/kursnet/kursnet_rules.dart';
 import '../domain/templates/main_template_variants.dart';
@@ -51,75 +54,119 @@ class EditorController extends ChangeNotifier {
   XmlElement? selectedService;
   String? loadedFilePath;
   String? statusMessage;
+  String? lastXsdError;
+  CourseListFilter courseFilter = const CourseListFilter();
 
   List<CourseListEntry> get sortedCourses {
-    final services = session.getServiceNodes();
-    final angebote = <XmlElement>[];
-    final childrenByCourseId = <String, List<XmlElement>>{};
-    final others = <XmlElement>[];
-
-    for (final service in services) {
-      if (CatalogSession.isAngebot(service)) {
-        angebote.add(service);
-        continue;
-      }
-      final courseId = CatalogSession.educationCourseId(service) ?? '';
-      if (courseId.isEmpty) {
-        others.add(service);
-      } else {
-        childrenByCourseId.putIfAbsent(courseId, () => []).add(service);
-      }
-    }
-
-    int byStart(XmlElement a, XmlElement b) {
+    final services = session
+        .getServiceNodes()
+        .where(CatalogSession.isListTermin)
+        .toList();
+    services.sort((a, b) {
       final cmp = DateFieldRules.getCourseStartDateOrMax(a)
           .compareTo(DateFieldRules.getCourseStartDateOrMax(b));
       if (cmp != 0) return cmp;
       return (XmlPath.getChildText(a, 'PRODUCT_ID') ?? '')
           .compareTo(XmlPath.getChildText(b, 'PRODUCT_ID') ?? '');
-    }
-
-    angebote.sort(byStart);
-    for (final children in childrenByCourseId.values) {
-      children.sort(byStart);
-    }
-    others.sort(byStart);
-
-    final ordered = <XmlElement>[];
-    final used = <XmlElement>{};
-    for (final angebot in angebote) {
-      ordered.add(angebot);
-      final id = XmlPath.getChildText(angebot, 'PRODUCT_ID') ?? '';
-      final kids = childrenByCourseId[id] ?? const <XmlElement>[];
-      ordered.addAll(kids);
-      used.addAll(kids);
-    }
-    for (final children in childrenByCourseId.values) {
-      for (final child in children) {
-        if (!used.contains(child)) ordered.add(child);
-      }
-    }
-    ordered.addAll(others);
+    });
 
     final result = <CourseListEntry>[];
-    for (var i = 0; i < ordered.length; i++) {
-      final service = ordered[i];
+    for (var i = 0; i < services.length; i++) {
+      final service = services[i];
       result.add(
         CourseListEntry(
           service,
-          ServiceTitleBuilder.build(service, i, session.serviceStates[service]),
-          isVeranstaltung: !CatalogSession.isAngebot(service),
+          ServiceTitleBuilder.build(
+            service,
+            i,
+            asTermin: true,
+            compact: true,
+          ),
+          isVeranstaltung: true,
         ),
       );
     }
     return result;
   }
 
+  List<CourseListEntry> get visibleCourses => CourseListFilter.apply(
+        items: sortedCourses,
+        serviceOf: (item) => item.service,
+        isVeranstaltung: (item) => item.isVeranstaltung,
+        filter: courseFilter,
+      );
+
+  List<CourseListEntry> get sortedAngebote {
+    final angebote = session
+        .getServiceNodes()
+        .where(CatalogSession.isAngebot)
+        .toList();
+    angebote.sort((a, b) {
+      final kind = CourseListFilter.educationKindOf(a).label.compareTo(
+            CourseListFilter.educationKindOf(b).label,
+          );
+      if (kind != 0) return kind;
+      return (XmlPath.getChildText(a, 'PRODUCT_ID') ?? '')
+          .compareTo(XmlPath.getChildText(b, 'PRODUCT_ID') ?? '');
+    });
+
+    final result = <CourseListEntry>[];
+    for (var i = 0; i < angebote.length; i++) {
+      final service = angebote[i];
+      result.add(
+        CourseListEntry(
+          service,
+          ServiceTitleBuilder.build(
+            service,
+            i,
+            includeStartDate: false,
+            compact: true,
+            neutral: true,
+          ),
+        ),
+      );
+    }
+    return result;
+  }
+
+  List<CourseListEntry> get visibleAngebote => CourseListFilter.apply(
+        items: sortedAngebote,
+        serviceOf: (item) => item.service,
+        isVeranstaltung: (item) => item.isVeranstaltung,
+        filter: courseFilter.forAngebote,
+      );
+
+  List<String> get filterCities => CourseListFilter.uniqueCities(
+        session.getServiceNodes(),
+      );
+
+  List<DateTime> get filterStartDates {
+    final dates = CourseListFilter.uniqueStartDates(session.getServiceNodes());
+    if (courseFilter.showExpired) return dates;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return dates.where((d) => !d.isBefore(today)).toList();
+  }
+
+  void setCourseFilter(CourseListFilter value) {
+    courseFilter = value;
+    notifyListeners();
+  }
+
+  void clearCourseFilter() {
+    courseFilter = CourseListFilter(showExpired: courseFilter.showExpired);
+    notifyListeners();
+  }
+
   void loadXml(String path) {
     session.loadXml(path);
     loadedFilePath = path;
     selectedService = null;
-    statusMessage = 'XML geladen: $path';
+    courseFilter = const CourseListFilter();
+    lastXsdError = validateAgainstSchema(path);
+    statusMessage = lastXsdError == null
+        ? 'XML geladen, XSD-Prüfung erfolgreich: $path'
+        : 'XML geladen. XSD-Prüfung fehlgeschlagen: $path';
     notifyListeners();
   }
 
@@ -185,10 +232,21 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
   }
 
+  XmlElement? resolveAngebot(XmlElement? service) {
+    if (service == null) return null;
+    if (CatalogSession.isAngebot(service)) return service;
+    final courseId = CatalogSession.educationCourseId(service);
+    if (courseId == null || courseId.trim().isEmpty) return null;
+    for (final node in session.getServiceNodes()) {
+      if (!CatalogSession.isAngebot(node)) continue;
+      if (XmlPath.getChildText(node, 'PRODUCT_ID') == courseId) return node;
+    }
+    return null;
+  }
+
   XmlElement createService({
-    required LocationProfile location,
     required String mainVariant,
-    CourseTypeProfile? courseType,
+    Map<String, String> values = const {},
   }) {
     final isExtern = MainTemplateVariants.isExternenpruefung(mainVariant);
     final mainPath = templates.findMainTemplatePath(externenpruefung: isExtern);
@@ -197,16 +255,28 @@ class EditorController extends ChangeNotifier {
     }
 
     final configurator = TemplateConfigurator()..loadMainTemplate(mainPath);
-    configurator.applyLocationConfiguration(location);
-    if (courseType != null) {
-      configurator.applyCourseTypeConfiguration(courseType);
+    final template = configurator.getConfiguredTemplate();
+    TemplateConfigurator.stripTerminFields(template.rootElement);
+    for (final entry in values.entries) {
+      final raw = entry.value.trim();
+      if (raw.isEmpty) continue;
+      final value = entry.key == ImportantFields.pricePath
+          ? NumberInput.normalizeDecimal(raw)
+          : raw;
+      XmlPath.setNodeByPath(template.rootElement, entry.key, value);
     }
 
-    final created =
-        session.addServiceFromConfiguredTemplate(configurator.getConfiguredTemplate());
+    final created = session.addServiceFromConfiguredTemplate(
+      template,
+      applyDateDefaults: false,
+      pendingFields: {
+        ImportantFields.titlePath,
+        ImportantFields.educationTypePath,
+        ImportantFields.pricePath,
+      },
+    );
     selectedService = created;
-    statusMessage =
-        'Bildungsangebot erstellt für ${location.name} ($mainVariant, ${courseType?.name ?? 'ohne Vollzeit/Teilzeit'}).';
+    statusMessage = 'Bildungsangebot erstellt ($mainVariant).';
     notifyListeners();
     return created;
   }
@@ -216,8 +286,13 @@ class EditorController extends ChangeNotifier {
     required LocationProfile location,
     CourseTypeProfile? courseType,
   }) {
-    final copied =
-        session.copyServiceWithConfiguration(source, location, courseType);
+    final copied = session.copyServiceWithConfiguration(
+      source,
+      location,
+      courseType,
+      locationSource: _locationSource(location),
+      courseTypeSource: _courseTypeSource(courseType),
+    );
     selectedService = copied;
     statusMessage =
         'Kopie erstellt für ${location.name} (${courseType?.name ?? 'unverändert'}).';
@@ -225,15 +300,26 @@ class EditorController extends ChangeNotifier {
     return copied;
   }
 
-  XmlElement addVeranstaltung({XmlElement? source}) {
+  XmlElement addVeranstaltung({
+    XmlElement? source,
+    required LocationProfile location,
+    CourseTypeProfile? courseType,
+  }) {
     final base = source ?? selectedService;
     if (base == null) {
       throw StateError('Bitte zuerst ein Bildungsangebot auswählen.');
     }
-    final created = session.addVeranstaltungFrom(base);
+    final created = session.addVeranstaltungFrom(
+      base,
+      location: location,
+      courseType: courseType,
+      locationSource: _locationSource(location),
+      courseTypeSource: _courseTypeSource(courseType),
+    );
     selectedService = created;
     statusMessage =
-        'Veranstaltung/Termin zum Angebot ${CatalogSession.educationCourseId(created)} angelegt.';
+        'Termin zum Angebot ${CatalogSession.educationCourseId(created)} angelegt (${location.name}'
+        '${courseType == null ? '' : ', ${courseType.name}'}).';
     notifyListeners();
     return created;
   }
@@ -254,6 +340,17 @@ class EditorController extends ChangeNotifier {
     selectedService = null;
     statusMessage = 'SERVICE wurde entfernt.';
     notifyListeners();
+  }
+
+  XmlElement? _locationSource(LocationProfile location) {
+    final city = location.values['CITY'] ?? location.name;
+    if (city.trim().isEmpty) return null;
+    return templates.findTemplateByCity(city)?.service;
+  }
+
+  XmlElement? _courseTypeSource(CourseTypeProfile? courseType) {
+    if (courseType == null) return null;
+    return templates.findTemplateByFileNameContains(courseType.name)?.service;
   }
 
   XmlDocument buildValidatedExport() {
@@ -334,6 +431,7 @@ class EditorController extends ChangeNotifier {
   }
 
   String? validateAgainstSchema(String xmlPath) {
+    final checkPath = _utf8CopyForSchema(xmlPath);
     final candidates = <String>[
       XsdValidator.defaultDllPath(store.nativeDllFolder),
       p.join(Directory.current.path, 'native', 'xsd_validator.dll'),
@@ -360,7 +458,7 @@ class EditorController extends ChangeNotifier {
       try {
         final validator = XsdValidator(normalized);
         validator.load();
-        return validator.validate(xmlPath, store.schemaPath);
+        return validator.validate(checkPath, store.schemaPath);
       } catch (e) {
         lastError = e;
       }
@@ -372,12 +470,25 @@ class EditorController extends ChangeNotifier {
             'xsd_validator.dll nach flutter/native/ kopieren.';
   }
 
+  /// Native XmlReader cannot honor encoding="iso-8859-15".
+  static String _utf8CopyForSchema(String xmlPath) {
+    final text = XmlFileIo.readText(xmlPath).replaceFirst(
+      RegExp(r'''encoding\s*=\s*["'][^"']+["']''', caseSensitive: false),
+      'encoding="utf-8"',
+    );
+    final file = File(
+      p.join(Directory.systemTemp.path, 'openqcat_xsd_check.xml'),
+    );
+    file.writeAsStringSync(text, encoding: utf8);
+    return file.path;
+  }
+
   List<String> get newServiceTitles {
     final list = <String>[];
     var i = 0;
     for (final entry in session.serviceStates.entries) {
       if (entry.value == ServiceState.neu && entry.key.parent != null) {
-        list.add(ServiceTitleBuilder.build(entry.key, i, entry.value));
+        list.add(ServiceTitleBuilder.build(entry.key, i, state: entry.value));
       }
       i++;
     }
@@ -389,7 +500,7 @@ class EditorController extends ChangeNotifier {
     var i = 0;
     for (final entry in session.serviceStates.entries) {
       if (entry.value == ServiceState.updated && entry.key.parent != null) {
-        list.add(ServiceTitleBuilder.build(entry.key, i, entry.value));
+        list.add(ServiceTitleBuilder.build(entry.key, i, state: entry.value));
       }
       i++;
     }
