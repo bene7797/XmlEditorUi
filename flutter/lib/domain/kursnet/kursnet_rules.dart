@@ -43,11 +43,24 @@ class KursnetRules {
     OpenqReference? reference,
   }) {
     final errors = <String>[];
-    final header = XmlPath.findChild(root, 'HEADER');
-    if (header != null) {
-      errors.addAll(validateHeader(header));
+    if (root.name.local.toLowerCase() != 'openqcat') {
+      errors.add(
+        'Wurzelelement muss OPENQCAT sein (gefunden: <${root.name.local}>). '
+        'Ohne Katalog-HEADER unter OPENQCAT ist die Datei für KURSNET ungültig.',
+      );
+    }
+
+    // Only the HEADER directly under OPENQCAT counts — not HEADER inside SERVICE.
+    final header = root.name.local.toLowerCase() == 'openqcat'
+        ? XmlPath.findChild(root, 'HEADER')
+        : null;
+    if (header == null) {
+      errors.add(
+        'HEADER fehlt als Kind von OPENQCAT. '
+        'Ein HEADER nur innerhalb eines SERVICE zählt nicht.',
+      );
     } else {
-      errors.add('HEADER fehlt.');
+      errors.addAll(validateHeader(header));
     }
 
     final services = XmlPath.descendantElements(root)
@@ -61,13 +74,14 @@ class KursnetRules {
 
   static List<String> validateHeader(XmlElement header) {
     final errors = <String>[];
+    if (XmlPath.findChild(header, 'CATALOG') == null) {
+      errors.add('HEADER/CATALOG fehlt.');
+    }
+
     final creator = XmlPath.findChild(header, 'DOCUMENT_CREATOR');
-    if (creator != null) {
-      _requireContactCore(creator, 'DOCUMENT_CREATOR', errors, requireRole: false);
-      final email = XmlPath.getTextByPath(creator, 'EMAILS/EMAIL');
-      if (email == null || email.isEmpty) {
-        errors.add('DOCUMENT_CREATOR/EMAILS/EMAIL ist für KURSNET Pflicht.');
-      }
+    if (creator != null &&
+        (XmlPath.getChildText(creator, 'LAST_NAME') ?? '').isEmpty) {
+      errors.add('DOCUMENT_CREATOR/LAST_NAME darf nicht leer sein.');
     }
 
     final supplier = XmlPath.findChild(header, 'SUPPLIER');
@@ -84,18 +98,8 @@ class KursnetRules {
     if (contacts.isEmpty) {
       errors.add('HEADER/SUPPLIER/CONTACT fehlt.');
     } else {
-      var hasRequiredRole = false;
       for (final contact in contacts) {
         _requireContactCore(contact, 'SUPPLIER/CONTACT', errors);
-        final type = XmlPath.findChild(contact, 'CONTACT_ROLE')
-            ?.getAttribute('type');
-        if (type == '2' || type == '3') hasRequiredRole = true;
-      }
-      if (!hasRequiredRole) {
-        errors.add(
-          'HEADER/SUPPLIER/CONTACT braucht CONTACT_ROLE type 2 '
-          '(Gesamtansprechpartner) oder 3 (Leiter des Betriebs).',
-        );
       }
     }
 
@@ -233,7 +237,7 @@ class KursnetRules {
       if (!_phoneNames.contains(name)) continue;
       final value = node.innerText.trim();
       if (value.isEmpty) {
-        errors.add('$prefix: leeres <$name> ist bei KURSNET unzulässig.');
+        // KURSNET itself exports empty <FAX></FAX>; only filled numbers are checked.
         continue;
       }
       if (!phonePattern.hasMatch(value)) {

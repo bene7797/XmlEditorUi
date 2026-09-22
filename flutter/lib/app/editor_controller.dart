@@ -382,8 +382,9 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  List<String> validateKursnetRules() {
-    final doc = session.buildExportDocument();
+  /// Validates the chosen XML file as-is (no export sanitizing).
+  List<String> validateKursnetRulesFile(String path) {
+    final doc = XmlFileIo.loadDocument(path);
     return KursnetRules.validateDocument(
       doc.rootElement,
       reference: reference,

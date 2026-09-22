@@ -114,16 +114,18 @@ class _ServiceEditorPageState extends State<ServiceEditorPage>
   }
 
   Future<void> _validateKursnet() async {
-    if (!c.session.isLoaded) {
-      _showError('Bitte zuerst XML öffnen.');
-      return;
-    }
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['xml'],
+    );
+    if (result == null || result.files.single.path == null) return;
     try {
-      final errors = c.validateKursnetRules();
+      final path = result.files.single.path!;
+      final errors = c.validateKursnetRulesFile(path);
       if (!mounted) return;
       if (errors.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('KURSNET-Regeln erfüllt.')),
+          SnackBar(content: Text('KURSNET-Regeln erfüllt: $path')),
         );
       } else {
         _showError(errors.join('\n'));

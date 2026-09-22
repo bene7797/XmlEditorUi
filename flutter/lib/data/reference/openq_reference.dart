@@ -163,8 +163,8 @@ class OpenqReference {
   static String? _fieldHint(String upper) {
     if (upper.contains('CONTACT_ROLE')) {
       return 'Rolle des Ansprechpartners (type im XML).\n'
-          'Im HEADER/SUPPLIER sind nur type 2 (Gesamtansprechpartner) '
-          'oder 3 (Leiter des Betriebs) zulässig.';
+          'KURSNET akzeptiert u. a. 1 Ansprechpartner, 2 Gesamtansprechpartner, '
+          '3 Leiter des Betriebs, 5 Sonstige.';
     }
     if (upper.contains('INSTRUCTION_TIME')) {
       return 'Unterrichtszeit: type 1 = Vollzeit, type 2 = Teilzeit.';
